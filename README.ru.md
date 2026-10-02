@@ -4,10 +4,10 @@
 
 **Синхронизация папок между ноутбуком и сетевым компьютером. Приёмник становится точной копией источника, перемещения распознаются, а кнопка «Остановить» возвращает всё как было.**
 
-[Скачать для Windows](https://github.com/ALEXalesha/SynchronizationApp/releases/latest) &nbsp;·&nbsp; [English version of this file](README.md)
+[Скачать для Windows](https://github.com/ALEXalesha/SyncGlass/releases/latest) &nbsp;·&nbsp; [English version of this file](README.md)
 
-[![CI](https://github.com/ALEXalesha/SynchronizationApp/actions/workflows/ci.yml/badge.svg)](https://github.com/ALEXalesha/SynchronizationApp/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ALEXalesha/SynchronizationApp?color=16a34a)](https://github.com/ALEXalesha/SynchronizationApp/releases/latest)
+[![CI](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml/badge.svg)](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ALEXalesha/SyncGlass?color=16a34a)](https://github.com/ALEXalesha/SyncGlass/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img src="docs/screenshots/window.png" width="860" alt="Два дерева: слева локальная папка с отметками, справа сетевая">

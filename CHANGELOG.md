@@ -2,7 +2,7 @@
 
 What changed for the user in each release. The full text of each release, in English and
 Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
-[releases page](https://github.com/ALEXalesha/SynchronizationApp/releases).
+[releases page](https://github.com/ALEXalesha/SyncGlass/releases).
 
 ## 1.2.4 - 2026-09-26 - Electron icon
 

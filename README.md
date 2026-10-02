@@ -4,10 +4,10 @@
 
 **Folder sync between a laptop and a networked PC. The destination becomes an exact copy of the source, moves are recognised as moves, and the Stop button puts everything back the way it was.**
 
-[Download for Windows](https://github.com/ALEXalesha/SynchronizationApp/releases/latest) &nbsp;·&nbsp; [Русская версия этого файла](README.ru.md)
+[Download for Windows](https://github.com/ALEXalesha/SyncGlass/releases/latest) &nbsp;·&nbsp; [Русская версия этого файла](README.ru.md)
 
-[![CI](https://github.com/ALEXalesha/SynchronizationApp/actions/workflows/ci.yml/badge.svg)](https://github.com/ALEXalesha/SynchronizationApp/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ALEXalesha/SynchronizationApp?color=16a34a)](https://github.com/ALEXalesha/SynchronizationApp/releases/latest)
+[![CI](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml/badge.svg)](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ALEXalesha/SyncGlass?color=16a34a)](https://github.com/ALEXalesha/SyncGlass/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img src="docs/screenshots/window.png" width="860" alt="Two trees: the local folder with ticks on the left, the network folder on the right">
