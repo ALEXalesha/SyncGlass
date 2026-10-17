@@ -14,6 +14,9 @@
 
 </div>
 
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+Код, тесты и документация этого проекта написаны Claude (Anthropic) в Claude Code. Идеи, проверка и решения - Алексей.
+
 Настольное приложение для Windows, с 1.2.0 в двух версиях - на Electron и на C#/WPF
 (см. «Две версии» ниже), для синхронизации папок между ноутбуком и сетевым компьютером. Дизайн — liquid glass в стиле Apple.
 
