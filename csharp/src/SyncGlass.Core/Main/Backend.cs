@@ -268,6 +268,19 @@ public sealed class Backend
         }
     }
 
+    // «Без мусора» меняет набор видимых папок: сканы и индекс с прежним набором описывают
+    // уже не то дерево - план по ним удалил бы или не заметил мусор (как set-skip-junk в main.js).
+    public void SetSkipJunk(bool on)
+    {
+        FsOps.SetSkipJunk(on);
+        lock (_gate)
+        {
+            _crawlToken++;
+            _crawlData = null;
+            _scanCache.Clear();
+        }
+    }
+
     // Обходит одну сторону и говорит, можно ли доверять индексу: папку проверяем до
     // и после - пропавшая посреди обхода сеть читается как пустая ветка.
     private static async Task<bool> CrawlSide(string root, FsOps.CrawlEntry onEntry, List<string> skippedOut)
@@ -475,7 +488,10 @@ public sealed class Backend
 
     public void CancelPreview() => Interlocked.Increment(ref _previewToken);
 
-    public async Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress = null)
+    // movesProgress - фаза сверки перемещений (done, total), как phase 'moves' в main.js:
+    // без неё окно стояло на последнем числе скана десятки минут (24.10, «1 030 009»).
+    public async Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress = null,
+        IProgress<(int Done, int Total)>? movesProgress = null)
     {
         var (srcRoot, dstRoot) = args.Direction == "toNetwork" ? (args.LocalPath, args.NetworkPath) : (args.NetworkPath, args.LocalPath);
         var token = Interlocked.Increment(ref _previewToken);
@@ -492,11 +508,22 @@ public sealed class Backend
             }
         }
 
+        // Первый вызов (done = 0) досылает итог скана: пороговая отправка его теряла.
+        var movesSent = Stopwatch.StartNew();
+        void OnMoves(int done, int total)
+        {
+            if (Volatile.Read(ref _previewToken) != token) throw new OperationCanceledException("aborted");
+            if (done != 0 && done != total && movesSent.ElapsedMilliseconds <= 150) return;
+            movesSent.Restart();
+            if (done == 0) progress?.Report(Volatile.Read(ref scanned));
+            movesProgress?.Report((done, total));
+        }
+
         try
         {
             AssertRootsReachable(srcRoot, dstRoot);
             await RestoreBothStages(srcRoot!, dstRoot!);
-            var plan = await Plan.BuildRunPlan(srcRoot!, dstRoot!, args.Folders, args.Excludes, MakeScanner(OnFile, args.Folders));
+            var plan = await Plan.BuildRunPlan(srcRoot!, dstRoot!, args.Folders, args.Excludes, MakeScanner(OnFile, args.Folders), OnMoves);
             return new PreviewResult(
                 Plan.CountByFolder(plan, args.Folders),
                 SyncOps.Summarize(plan),
@@ -571,10 +598,20 @@ public sealed class Backend
 
         await RestoreBothStages(srcRoot!, dstRoot!);
 
+        // Запуск снова сверяет перемещения - показываем и этот этап («verify»), иначе
+        // после «Выполнить» окно молча стояло на «Начинаю…».
+        var verifySent = Stopwatch.StartNew();
+        var noCounts = new Dictionary<string, int>();
+        void OnMoves(int done, int total)
+        {
+            if (done != 0 && done != total && verifySent.ElapsedMilliseconds <= 150) return;
+            verifySent.Restart();
+            progress?.Report(new SyncProgress(done, total, "verify", "", noCounts));
+        }
         SyncPlan plan;
         try
         {
-            plan = await Plan.BuildRunPlan(srcRoot!, dstRoot!, args.Folders, args.Excludes, MakeScanner(null, args.Folders));
+            plan = await Plan.BuildRunPlan(srcRoot!, dstRoot!, args.Folders, args.Excludes, MakeScanner(null, args.Folders), OnMoves);
         }
         catch (Exception err)
         {

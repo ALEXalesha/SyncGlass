@@ -374,6 +374,11 @@
                                 <ComboBoxItem Tag="name" Content="По имени" />
                                 <ComboBoxItem Tag="date" Content="По дате" />
                             </ComboBox>
+                            <CheckBox Style="{StaticResource GlassCheck}" IsChecked="{Binding SkipJunk, Mode=OneWay}" Click="SkipJunk_Click"
+                                      VerticalAlignment="Center" Margin="12,0,0,0"
+                                      ToolTip="node_modules, .venv, __pycache__ и кеши тестов: не считаются, не копируются и на приёмнике не удаляются - их пересоберут npm ci / uv sync. Выключите, чтобы синхронизировать всё.">
+                                <TextBlock Text="Без мусора" Style="{StaticResource Dim}" FontSize="12" />
+                            </CheckBox>
                         </StackPanel>
                         <TextBlock DockPanel.Dock="Right" Text="{Binding StatusSummary}" Foreground="{StaticResource TextDim}" FontSize="12.5" VerticalAlignment="Center" Margin="9,0,0,0" />
                         <TextBlock Text="{Binding StatusText}" FontSize="12.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />

@@ -171,6 +171,11 @@ public partial class MainWindow : Window
         if (SizeModeBox.SelectedValue is string mode && mode != _vm.SizeMode) _vm.ChangeSizeMode(mode);
     }
 
+    private async void SkipJunk_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox box) await _vm.ChangeSkipJunk(box.IsChecked == true);
+    }
+
     private async void Sort_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (SortBox.SelectedValue is string sort && sort != _vm.Sort) await _vm.SetSort(sort);

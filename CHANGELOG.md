@@ -4,7 +4,7 @@ What changed for the user in each release. The full text of each release, in Eng
 Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
 [releases page](https://github.com/ALEXalesha/SyncGlass/releases).
 
-## Unreleased - big trees (both versions; the C# part follows)
+## Unreleased - big trees (both versions)
 
 - Preview of a tree after moving folders "hung": the file counter stopped at the last scanned number (1 030 009 on
   the author's tree) for tens of minutes. The scan was done; the app was checking hundreds of thousands of move
@@ -17,7 +17,9 @@ Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
   tree does not show them. Both roads - the live scan and the background index - see the same. Off = as before.
 - Laws: test/million.test.js (progress to done = total without long silence, Cancel reaches the check, a plan with
   junk equals the plan of the same tree without it on both roads, the tree hides junk, the receiver's junk stays,
-  off = synced like any folder); 7 mutants, all caught.
+  off = synced like any folder); 7 mutants, all caught. C#: the same in Plan.ConfirmMoves, FsOps walks, Backend
+  (Preview gets a moves progress, SetSkipJunk), the "Без мусора" checkbox in the status bar;
+  tests/MillionTests.cs - 5 laws, 5 mutants caught. 212 JS + 266 C# tests green.
 
 ## 1.2.4 - 2026-09-26 - Electron icon
 

@@ -42,6 +42,7 @@ public sealed partial class MainViewModel : ObservableObject, ICrawlSink
     [ObservableProperty] private string _direction = "toNetwork"; // toNetwork | toLocal
     [ObservableProperty] private string _sort = "name";           // name | date
     [ObservableProperty] private string _sizeMode = "capped";     // off | capped | full
+    [ObservableProperty] private bool _skipJunk = true;           // «Без мусора» (24.10)
 
     public List<TreeNode> Roots { get; set; } = new();
     public Dictionary<string, Mark> Marks { get; private set; } = new(StringComparer.Ordinal);
@@ -214,7 +215,7 @@ public sealed partial class MainViewModel : ObservableObject, ICrawlSink
 
     // ---- Настройки ----
     private void Persist()
-        => _ = _api.SaveSettings(new AppSettings { LocalPath = LocalPath, NetworkPath = NetworkPath, Direction = Direction, Sort = Sort, SizeMode = SizeMode });
+        => _ = _api.SaveSettings(new AppSettings { LocalPath = LocalPath, NetworkPath = NetworkPath, Direction = Direction, Sort = Sort, SizeMode = SizeMode, SkipJunk = SkipJunk });
 
     private void StartCrawlIfEnabled()
     {
@@ -331,6 +332,18 @@ public sealed partial class MainViewModel : ObservableObject, ICrawlSink
         RenderTree();
         if (recrawl) StartCrawlIfEnabled(); // фоновая загрузка размеров не блокирует окно
         else if (StatusText == reading) SetStatus(was.StatusKind, was.StatusText, was.StatusSummary);
+    }
+
+    // «Без мусора»: ядро сбрасывает сканы и индекс (собраны с другим набором папок),
+    // дерево и размеры перечитываются заново - как change у #skipJunk в renderer.js.
+    public async Task ChangeSkipJunk(bool on)
+    {
+        SkipJunk = on;
+        Persist();
+        _api.StopCrawl();
+        SizeMap.Clear();
+        _api.SetSkipJunk(on);
+        await Refresh(true);
     }
 
     public void ChangeSizeMode(string mode)
@@ -638,6 +651,8 @@ public sealed partial class MainViewModel : ObservableObject, ICrawlSink
         if (s.SizeMode is "off" or "capped" or "full") SizeMode = s.SizeMode;
         else if (s.Other != null && s.Other.TryGetValue("showSizes", out var show) && show.ValueKind == System.Text.Json.JsonValueKind.False)
             SizeMode = "off"; // миграция со старой настройки
+        SkipJunk = s.SkipJunk != false; // нет настройки (старые версии) - включено
+        _api.SetSkipJunk(SkipJunk);
         if (s.Direction is "toNetwork" or "toLocal") SetDirection(s.Direction);
         if (!string.IsNullOrEmpty(s.LocalPath)) SetPath("local", s.LocalPath);
         if (!string.IsNullOrEmpty(s.NetworkPath)) SetPath("network", s.NetworkPath);

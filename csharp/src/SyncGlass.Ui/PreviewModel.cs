@@ -68,11 +68,19 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
         ProgressVisible = true;
         ProgressIndeterminate = true;
 
-        var progress = new Progress<int>(scanned => Message("empty", $"Сканирую выбранное… {Format.FmtNum(scanned)} файлов"));
+        var lastScanned = 0;
+        var progress = new Progress<int>(scanned =>
+        {
+            lastScanned = scanned;
+            Message("empty", $"Сканирую выбранное… {Format.FmtNum(scanned)} файлов");
+        });
+        // Сверка перемещений после скана (24.10): своё сообщение вместо застывшего счётчика.
+        var moves = new Progress<(int Done, int Total)>(m =>
+            Message("empty", $"Просканировано {Format.FmtNum(lastScanned)} файлов. Сверяю перемещения: {Format.FmtNum(m.Done)} из {Format.FmtNum(m.Total)}"));
         PreviewResult result;
         try
         {
-            result = await main.Api.Preview(main.Args(), progress);
+            result = await main.Api.Preview(main.Args(), progress, moves);
         }
         catch (Exception err)
         {
@@ -189,6 +197,7 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
     private static readonly Dictionary<string, string> ActionVerb = new()
     {
         ["move"] = "перемещаю",
+        ["verify"] = "сверяю перемещения",
         ["copy"] = "копирую",
         ["overwrite"] = "обновляю",
         ["trash"] = "убираю",

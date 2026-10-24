@@ -62,6 +62,7 @@ public sealed class AppSettings
     public string? Direction { get; set; }   // toNetwork | toLocal
     public string? Sort { get; set; }        // name | date
     public string? SizeMode { get; set; }    // off | capped | full
+    public bool? SkipJunk { get; set; }      // «Без мусора»; нет (старые версии) - включено
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Other { get; set; }
@@ -224,9 +225,11 @@ public sealed class SizeCacheStore(string userData)
 
     // Имя - md5 от «локальный \0 сетевой» в UTF-8, как у JS: иначе две версии
     // не находили бы кеш друг друга и обходили бы дерево заново.
+    // С мусором и без - разные кеши (как в main.js): без мусора (по умолчанию) имя прежнее.
     public string FileFor(string? localPath, string? networkPath)
     {
-        var hash = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes($"{localPath ?? ""}\0{networkPath ?? ""}"));
+        var all = FsOps.IsJunkDir("node_modules") ? "" : "\0all";
+        var hash = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes($"{localPath ?? ""}\0{networkPath ?? ""}{all}"));
         return System.IO.Path.Join(_dir, $"sizecache-{Convert.ToHexString(hash).ToLowerInvariant()}.json");
     }
 

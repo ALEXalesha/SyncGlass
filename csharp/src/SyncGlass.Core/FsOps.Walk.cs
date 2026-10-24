@@ -248,6 +248,7 @@ public static partial class FsOps
             if (d.Name == StageDir) return ChildKind.Skip;
             if (d.IsDir)
             {
+                if (IsJunkDir(d.Name)) return ChildKind.Skip;
                 if (dirsOut != null) lock (dirsOut) dirsOut.Add(childRel);
                 return ChildKind.Dir;
             }
@@ -297,7 +298,8 @@ public static partial class FsOps
             return Task.FromResult((new List<ChildItem>(), false));
         }
         var items = dirents
-            .Where(d => !d.IsSymlink && d.Name != StageDir && (d.IsDir || d.IsFile))
+            // Мусор в дереве не показываем: выбрать его - значит ждать синхронизации, которой не будет.
+            .Where(d => !d.IsSymlink && d.Name != StageDir && (d.IsFile || (d.IsDir && !IsJunkDir(d.Name))))
             .Select(d => new ChildItem(d.Name, d.IsDir, withMtime ? d.MtimeMs : 0))
             .ToList();
         return Task.FromResult((items, true));
@@ -312,7 +314,7 @@ public static partial class FsOps
         public ChildKind Child(WalkNode node, Dirent d, string childRel)
         {
             if (d.IsSymlink || d.Name == StageDir) return ChildKind.Skip;
-            if (d.IsDir) return ChildKind.Dir;
+            if (d.IsDir) return IsJunkDir(d.Name) ? ChildKind.Skip : ChildKind.Dir;
             return d.IsFile ? ChildKind.File : ChildKind.Skip;
         }
 

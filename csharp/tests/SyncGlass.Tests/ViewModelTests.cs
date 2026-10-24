@@ -27,7 +27,7 @@ internal sealed class FakeApi : IApi
         ListCalls++;
         return Task.FromResult(List(relPath));
     }
-    public Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress) => Task.FromResult(PreviewAnswer ?? new PreviewResult(Error: "нет"));
+    public Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress, IProgress<(int Done, int Total)>? moves) => Task.FromResult(PreviewAnswer ?? new PreviewResult(Error: "нет"));
     public void CancelPreview() { }
     public Task<SyncResult> Sync(SyncArgs args, IProgress<SyncProgress>? progress) => Task.FromResult(SyncAnswer ?? new SyncResult());
     public void CancelSync() { }
@@ -38,6 +38,8 @@ internal sealed class FakeApi : IApi
         return Task.FromResult(new CrawlResult(true));
     }
     public void StopCrawl() => Stops++;
+    public bool? SkipJunkSet;
+    public void SetSkipJunk(bool on) => SkipJunkSet = on;
 }
 
 // Перенос test/renderer.test.js и окна истории из history.test.js: модель выбора в дереве

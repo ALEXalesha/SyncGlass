@@ -339,16 +339,42 @@ public static class Plan
     // Сверяет кандидатов в перемещения по содержимому и разворачивает непрошедших
     // обратно в «скопировать + выбросить»: имя, размер и дата совпадают у разных файлов
     // пачкой (распаковка, git checkout, robocopy), и приёмник получал чужое содержимое.
-    private static async Task ConfirmMoves(string srcRoot, string dstRoot, SyncPlan plan)
+    //
+    // onStep(done, total) - прогресс и отмена (24.10, «зависло на 1 030 009»): после переноса
+    // дерева кандидатов сотни тысяч, и сверка шла молча, счётчик скана стоял. Бросок из onStep
+    // останавливает сверку и уходит вызывающему. Пара - два маленьких чтения, узкое место -
+    // задержка сети, поэтому сверок разом больше, чем записей при выполнении (как в plan.js).
+    public const int ConfirmConcurrency = 64;
+
+    private static async Task ConfirmMoves(string srcRoot, string dstRoot, SyncPlan plan, Action<int, int>? onStep = null)
     {
         if (plan.Moves.Count == 0) return;
-        var verdicts = new bool[plan.Moves.Count];
-        await FsOps.RunPool(Enumerable.Range(0, plan.Moves.Count).ToList(), FsOps.ApplyConcurrency, async i =>
+        var total = plan.Moves.Count;
+        var verdicts = new bool[total];
+        var gate = new object();
+        var done = 0;
+        Exception? stop = null;
+        void Step()
         {
+            // Работники пула идут на разных потоках: счёт и вызов - под замком, по порядку.
+            lock (gate)
+            {
+                if (onStep == null || stop != null) return;
+                try { onStep(done, total); }
+                catch (Exception err) { stop = err; }
+            }
+        }
+        Step();
+        await FsOps.RunPool(Enumerable.Range(0, total).ToList(), ConfirmConcurrency, async i =>
+        {
+            if (Volatile.Read(ref stop) != null) return;
             var mv = plan.Moves[i];
             try { verdicts[i] = await FsOps.SameContent(Path.Join(srcRoot, mv.To), Path.Join(dstRoot, mv.From)); }
             catch { verdicts[i] = false; }
+            lock (gate) done++;
+            Step();
         });
+        if (stop != null) throw stop;
 
         var confirmed = new List<Move>();
         for (var i = 0; i < plan.Moves.Count; i++)
@@ -368,7 +394,7 @@ public static class Plan
     // Один план на весь запуск: ветки объединяются, и только потом ищутся перемещения -
     // иначе перенос файла между двумя выбранными ветками остался бы незамеченным.
     public static async Task<SyncPlan> BuildRunPlan(string srcRoot, string dstRoot, IReadOnlyList<string> folders,
-        IReadOnlyCollection<string> excludes, Scanner scan)
+        IReadOnlyCollection<string> excludes, Scanner scan, Action<int, int>? onMoves = null)
     {
         var merged = new SyncPlan();
         var srcDirs = new List<string>();
@@ -393,7 +419,7 @@ public static class Plan
         }
 
         var plan = Sync.DetectMoves(merged);
-        await ConfirmMoves(srcRoot, dstRoot, plan);
+        await ConfirmMoves(srcRoot, dstRoot, plan, onMoves);
         plan.Dirs = Sync.PlanDirs(srcDirs, dstDirs);
         plan.Conflicts = TopPaths(conflicts);
         // Закрытые правами папки в работу не входят, но сказать о них обязаны:

@@ -11,6 +11,16 @@ public static partial class FsOps
     public const int ApplyConcurrency = 16;
     public const string StageDir = ".sgundo";
 
+    // «Без мусора» (24.10, как JUNK_DIRS в fsops.js): эти папки пересоздают сами (npm ci,
+    // uv sync, кеши тестов), а файлов в них больше, чем во всём остальном. С галочкой
+    // (по умолчанию включена) их не видит ни один обход: не считаются, не копируются,
+    // на приёмнике не удаляются. Одна проверка на все обходы - дороги обязаны совпадать.
+    public static readonly IReadOnlySet<string> JunkDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "node_modules", ".venv", "__pycache__", ".pytest_cache", ".hypothesis", ".ruff_cache", ".mypy_cache" };
+    private static volatile bool skipJunk = true;
+    public static void SetSkipJunk(bool on) => skipJunk = on;
+    public static bool IsJunkDir(string name) => skipJunk && JunkDirs.Contains(name);
+
     // Сколько байт сверяем с каждого конца, когда файл крупный. Мелкий читается
     // целиком: именно мелкие файлы (config.json, __init__.py, метки) чаще всего
     // и совпадают по имени с размером, будучи совершенно разными.

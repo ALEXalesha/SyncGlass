@@ -16,12 +16,13 @@ public interface IApi
     Task<string?> PickFolder();
     Task<ProbeResult> Probe(string? localPath, string? networkPath);
     Task<ListResult> ListFolders(string? localPath, string? networkPath, string relPath, bool force, bool needMtime);
-    Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress);
+    Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress, IProgress<(int Done, int Total)>? moves);
     void CancelPreview();
     Task<SyncResult> Sync(SyncArgs args, IProgress<SyncProgress>? progress);
     void CancelSync();
     Task<CrawlResult> StartCrawl(string? localPath, string? networkPath, bool noLimit, bool skipCached, ICrawlSink sink);
     void StopCrawl();
+    void SetSkipJunk(bool on);
 }
 
 /// <summary>Настоящий мост: ядро плюс системное окно выбора папки от WPF.</summary>
@@ -35,7 +36,8 @@ public sealed class BackendApi(Backend backend, Func<Task<string?>> pickFolder) 
     public Task<ProbeResult> Probe(string? localPath, string? networkPath) => Task.Run(() => backend.Probe(localPath, networkPath));
     public Task<ListResult> ListFolders(string? localPath, string? networkPath, string relPath, bool force, bool needMtime)
         => Task.Run(() => backend.ListFolders(localPath, networkPath, relPath, force, needMtime));
-    public Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress) => Task.Run(() => backend.Preview(args, progress));
+    public Task<PreviewResult> Preview(SyncArgs args, IProgress<int>? progress, IProgress<(int Done, int Total)>? moves)
+        => Task.Run(() => backend.Preview(args, progress, moves));
     public void CancelPreview() => backend.CancelPreview();
     public Task<SyncResult> Sync(SyncArgs args, IProgress<SyncProgress>? progress) => Task.Run(() => backend.Sync(args, progress));
     public void CancelSync() => backend.CancelSync();
@@ -43,4 +45,5 @@ public sealed class BackendApi(Backend backend, Func<Task<string?>> pickFolder) 
     public Task<CrawlResult> StartCrawl(string? localPath, string? networkPath, bool noLimit, bool skipCached, ICrawlSink sink)
         => Task.Run(() => backend.StartCrawl(localPath, networkPath, noLimit, skipCached, sink));
     public void StopCrawl() => backend.StopCrawl();
+    public void SetSkipJunk(bool on) => backend.SetSkipJunk(on);
 }
