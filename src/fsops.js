@@ -8,6 +8,20 @@ const path = require('path');
 // каждого запроса, поэтому пачка параллельных stat ускоряет обход в разы.
 const SCAN_CONCURRENCY = 32;
 
+// Папки-«мусор»: их пересоздают сами (npm ci, uv sync, кеши тестов), а файлов в них
+// больше, чем во всём остальном (миллион на дереве Алексея 24.10). С галочкой
+// «Пропускать мусор» (по умолчанию включена) их не видит ни один обход: не считаются,
+// не копируются и на приёмнике не удаляются - там их соберут заново. Одна проверка
+// на все обходы: дороги «живой скан» и «индекс обхода» обязаны видеть одно и то же.
+const JUNK_DIRS = new Set(['node_modules', '.venv', '__pycache__', '.pytest_cache', '.hypothesis', '.ruff_cache', '.mypy_cache']);
+let skipJunk = true;
+function setSkipJunk(on) {
+  skipJunk = !!on;
+}
+function isJunkDir(name) {
+  return skipJunk && JUNK_DIRS.has(name.toLowerCase());
+}
+
 // Служебная папка внутри приёмника. Туда на время синхронизации уезжают оригиналы
 // удаляемых и перезаписываемых файлов, чтобы остановку можно было откатить.
 // Ни один обход её не видит, иначе она попала бы в план как «лишние файлы».
@@ -185,6 +199,7 @@ async function scanInto(dir, rel, out, excludes, onFile, run, dirsOut, skippedOu
       if (dirent.isSymbolicLink()) return null;
       if (dirent.name === STAGE_DIR) return null;
       if (dirent.isDirectory()) {
+        if (isJunkDir(dirent.name)) return null;
         if (dirsOut) dirsOut.push(childRel);
         return 'dir';
       }
@@ -231,8 +246,9 @@ async function listChildren(dir, withMtime = false) {
     return { items: [], ok: false };
   }
 
+  // Мусор не показываем в дереве: выбрать его - значит ждать синхронизации, которой не будет.
   const kids = dirents.filter(
-    (d) => !d.isSymbolicLink() && d.name !== STAGE_DIR && (d.isDirectory() || d.isFile())
+    (d) => !d.isSymbolicLink() && d.name !== STAGE_DIR && (d.isFile() || (d.isDirectory() && !isJunkDir(d.name)))
   );
 
   if (!withMtime) {
@@ -278,7 +294,7 @@ async function crawlTree(root, rel, onEntry, run = null, skippedOut = null) {
     },
     child(node, dirent) {
       if (dirent.isSymbolicLink() || dirent.name === STAGE_DIR) return null;
-      if (dirent.isDirectory()) return 'dir';
+      if (dirent.isDirectory()) return isJunkDir(dirent.name) ? null : 'dir';
       return dirent.isFile() ? 'file' : null;
     },
     async file(node, childRel) {
@@ -905,4 +921,7 @@ module.exports = {
   runPool,
   APPLY_CONCURRENCY,
   STAGE_DIR,
+  JUNK_DIRS,
+  setSkipJunk,
+  isJunkDir,
 };

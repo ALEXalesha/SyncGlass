@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const net = require('net');
 const os = require('os');
 const { summarize } = require('./src/sync');
-const { scanFiles, listChildren, crawlTree, applyPlan, restoreStage } = require('./src/fsops');
+const { scanFiles, listChildren, crawlTree, applyPlan, restoreStage, setSkipJunk, isJunkDir } = require('./src/fsops');
 const {
   buildRunPlan, countByFolder, scanFromIndex, groupIndexByBranch, groupExcludesByBranch,
 } = require('./src/plan');
@@ -195,10 +195,13 @@ async function saveSettings(settings) {
 }
 
 // ---- Кеш размеров на диске (мгновенный показ при следующем открытии) ----
+// С мусором и без - разные кеши: размеры «без мусора» не годятся для показа «со всем»,
+// и наоборот. Без мусора (по умолчанию) имя файла прежнее - старый кеш не пропадает.
 function sizeCacheFile(localPath, networkPath) {
+  const all = isJunkDir('node_modules') ? '' : '\0all';
   const hash = crypto
     .createHash('md5')
-    .update(`${localPath || ''}\0${networkPath || ''}`)
+    .update(`${localPath || ''}\0${networkPath || ''}${all}`)
     .digest('hex');
   return path.join(app.getPath('userData'), `sizecache-${hash}.json`);
 }
@@ -557,6 +560,14 @@ ipcMain.handle('stop-crawl', () => {
   // отсутствующего: план по нему выглядит достоверным. Пусть план сканирует сам.
   crawlData = null;
 });
+// «Без мусора» меняет набор видимых папок: сканы и индекс, собранные с прежним
+// набором, описывают уже не то дерево - план по ним удалил бы или не заметил мусор.
+ipcMain.handle('set-skip-junk', (_event, on) => {
+  setSkipJunk(on);
+  crawlToken += 1;
+  crawlData = null;
+  scanCache.clear();
+});
 // Текущий обход — чтобы сохранить прогресс при закрытии окна.
 let activeCrawl = null; // { index, localPath, networkPath }
 // Данные завершённого обхода по каждому файлу — переиспользуются предпросмотром
@@ -798,10 +809,26 @@ ipcMain.handle('preview', async (event, { localPath, networkPath, folders, exclu
     }
   };
 
+  // Сверка перемещений идёт после скана. Без своего прогресса окно стояло на
+  // последнем числе скана десятки минут и выглядело зависшим (24.10, «1 030 009»),
+  // а отмена до неё не доходила. Первый вызов (done = 0) заодно отдаёт итог скана:
+  // пороговая отправка счётчика последнее число не досылала.
+  const onMoves = (done, total) => {
+    if (token !== previewToken) throw new Error('aborted');
+    const now = Date.now();
+    if (done !== 0 && done !== total && now - lastSent <= 150) return;
+    lastSent = now;
+    try {
+      event.sender.send('preview-progress', { scanned, phase: 'moves', done, total });
+    } catch {
+      // окно закрыли — счётчик показывать некому
+    }
+  };
+
   try {
     await assertRootsReachable(srcRoot, dstRoot);
     await restoreBothStages(srcRoot, dstRoot);
-    const plan = await buildRunPlan(srcRoot, dstRoot, folders, excludes, makeScanner(onFile, folders));
+    const plan = await buildRunPlan(srcRoot, dstRoot, folders, excludes, makeScanner(onFile, folders), onMoves);
     return {
       perFolder: countByFolder(plan, folders),
       totals: summarize(plan),
@@ -882,9 +909,22 @@ async function performSync(event, { localPath, networkPath, folders, excludes = 
 
   // Скан может оборваться на полпути (сеть отвалилась после проверки корней).
   // Тогда план строить не на чем — выходим до того, как хоть что-то тронули.
+  // Запуск строит план заново и снова сверяет перемещения - показываем и этот этап,
+  // иначе после «Выполнить» окно так же молча стояло на «Начинаю…».
+  let verifySent = 0;
+  const onMoves = (done, total) => {
+    const now = Date.now();
+    if (done !== 0 && done !== total && now - verifySent <= 150) return;
+    verifySent = now;
+    try {
+      event.sender.send('sync-progress', { done, total, action: 'verify', path: '' });
+    } catch {
+      // получателя больше нет — работу это не отменяет
+    }
+  };
   let plan;
   try {
-    plan = await buildRunPlan(srcRoot, dstRoot, folders, excludes, makeScanner(null, folders));
+    plan = await buildRunPlan(srcRoot, dstRoot, folders, excludes, makeScanner(null, folders), onMoves);
   } catch (err) {
     // Сорвался обычно обрыв связи. Что успели прочитать до него — уже под вопросом,
     // поэтому кеши сбрасываем: следующая попытка пойдёт за свежими данными.

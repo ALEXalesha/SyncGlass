@@ -60,12 +60,16 @@ const idleApi = {
   probe: async () => ({ localOk: true, networkOk: true }),
   startCrawl: async () => {},
   stopCrawl: async () => {},
+  setSkipJunk: async () => {},
   onCrawl: () => () => {},
   onSyncProgress: () => () => {},
   onPreviewProgress: () => () => {},
 };
 
+// Свой набор теста ложится поверх заглушек: новая функция в preload не роняет
+// тесты, которые о ней не знают (setSkipJunk, 24.10).
 function loadRenderer(api = idleApi) {
+  api = { ...idleApi, ...api };
   const byId = new Map();
   const document = {
     getElementById: (id) => {

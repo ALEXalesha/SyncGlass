@@ -15,6 +15,7 @@ const state = {
   networkOk: null,
   sort: 'name', // 'name' | 'date'
   sizeMode: 'capped', // 'off' | 'capped' (до 300k) | 'full' (без лимита)
+  skipJunk: true, // node_modules, .venv, кеши - не считать, не синхронизировать (24.10)
 };
 
 // Узел: { name, relPath, isDir, hasLocal, hasNetwork, loaded, loading, children }
@@ -49,6 +50,7 @@ const el = {
   netConn: document.getElementById('netConn'),
   sortMode: document.getElementById('sortMode'),
   sizeMode: document.getElementById('sizeMode'),
+  skipJunk: document.getElementById('skipJunk'),
   progressBar: document.querySelector('.progress-bar'),
   sbDot: document.getElementById('sbDot'),
   sbText: document.getElementById('sbText'),
@@ -212,6 +214,7 @@ function persist() {
     direction: state.direction,
     sort: state.sort,
     sizeMode: state.sizeMode,
+    skipJunk: state.skipJunk,
   });
 }
 
@@ -394,6 +397,17 @@ async function refresh({ force = false, recrawl = true } = {}) {
   if (recrawl) startCrawlIfEnabled();
   else if (el.sbText.textContent === reading) setStatus(was[0] || 'idle', was[1], was[2]);
 }
+
+// «Без мусора»: главный процесс сбрасывает сканы и индекс (они собраны с другим
+// набором папок), дерево и размеры перечитываются заново.
+el.skipJunk.addEventListener('change', async () => {
+  state.skipJunk = el.skipJunk.checked;
+  persist();
+  window.api.stopCrawl();
+  state.sizeMap.clear();
+  await window.api.setSkipJunk(state.skipJunk);
+  await refresh({ force: true });
+});
 
 el.sizeMode.addEventListener('change', () => {
   state.sizeMode = el.sizeMode.value;
@@ -729,8 +743,11 @@ async function openPreview() {
   el.progressFill.style.width = '';
 
   // Живой счётчик просканированных файлов.
-  const unsub = window.api.onPreviewProgress(({ scanned }) => {
-    el.previewSummary.innerHTML = `<div class="empty">Сканирую выбранное… ${scanned.toLocaleString('ru-RU')} файлов</div>`;
+  const unsub = window.api.onPreviewProgress(({ scanned, phase, done, total }) => {
+    el.previewSummary.innerHTML =
+      phase === 'moves'
+        ? `<div class="empty">Просканировано ${scanned.toLocaleString('ru-RU')} файлов. Сверяю перемещения: ${done.toLocaleString('ru-RU')} из ${total.toLocaleString('ru-RU')}</div>`
+        : `<div class="empty">Сканирую выбранное… ${scanned.toLocaleString('ru-RU')} файлов</div>`;
   });
 
   let result;
@@ -882,6 +899,7 @@ const ACTION_VERB = {
   mkdir: 'создаю папку',
   rmdir: 'убираю папку',
   rollback: 'возвращаю как было',
+  verify: 'сверяю перемещения',
 };
 
 async function runSync() {
@@ -1206,6 +1224,9 @@ async function probeTick() {
     state.sizeMode = 'off'; // миграция со старой настройки
   }
   el.sizeMode.value = state.sizeMode;
+  state.skipJunk = s.skipJunk !== false; // нет настройки (старые версии) - включено
+  el.skipJunk.checked = state.skipJunk;
+  await window.api.setSkipJunk(state.skipJunk);
   // Файл настроек мог испортиться (обрыв записи, правка руками). Путь не строкой
   // главный процесс принимает за путь и роняет весь листинг на path.join.
   if (s.direction === 'toNetwork' || s.direction === 'toLocal') setDirection(s.direction);

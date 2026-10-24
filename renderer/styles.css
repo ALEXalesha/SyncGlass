@@ -145,7 +145,8 @@ body {
   align-items: center;
   gap: 10px;
 }
-.size-toggle {
+.size-toggle,
+.junk-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -272,6 +273,7 @@ body {
 }
 /* Контролы отображения справа в статус-баре */
 .statusbar .size-toggle,
+.statusbar .junk-toggle,
 .statusbar .sort-field {
   flex-shrink: 0;
 }

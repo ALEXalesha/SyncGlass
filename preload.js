@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   startCrawl: (args) => ipcRenderer.invoke('start-crawl', args),
   stopCrawl: () => ipcRenderer.invoke('stop-crawl'),
+  setSkipJunk: (on) => ipcRenderer.invoke('set-skip-junk', !!on),
   onCrawl: (callbacks) => {
     const cached = (_e, d) => callbacks.onCached && callbacks.onCached(d);
     const progress = (_e, d) => callbacks.onProgress && callbacks.onProgress(d);

@@ -463,17 +463,41 @@ function topPaths(paths) {
 //
 // Читаем края, а не файл целиком: перемещение затем и распознаётся, что стоит
 // одного rename, и сверка не должна обходиться дороже самого копирования.
-async function confirmMoves(srcRoot, dstRoot, plan) {
+//
+// onStep(done, total) - прогресс и отмена. После переноса дерева кандидатов сотни
+// тысяч, и сверка шла молча: счётчик скана стоял на последнем числе десятки минут
+// («зависло на 1 030 009», 24.10). Бросок из onStep останавливает сверку и уходит
+// вызывающему. Каждая пара - два маленьких чтения, узкое место - задержка (сеть),
+// а не объём, поэтому одновременных сверок больше, чем записей при выполнении.
+const CONFIRM_CONCURRENCY = 64;
+
+async function confirmMoves(srcRoot, dstRoot, plan, onStep = null) {
   if (plan.moves.length === 0) return;
-  const verdicts = new Array(plan.moves.length);
+  const total = plan.moves.length;
+  const verdicts = new Array(total);
   const idx = plan.moves.map((_, i) => i);
-  await runPool(idx, APPLY_CONCURRENCY, async (i) => {
+  let done = 0;
+  let stop = null;
+  const step = () => {
+    if (!onStep || stop) return;
+    try {
+      onStep(done, total);
+    } catch (err) {
+      stop = err;
+    }
+  };
+  step();
+  await runPool(idx, CONFIRM_CONCURRENCY, async (i) => {
+    if (stop) return;
     const mv = plan.moves[i];
     verdicts[i] = await sameContent(
       path.join(srcRoot, mv.to),
       path.join(dstRoot, mv.from)
     ).catch(() => false);
+    done += 1;
+    step();
   });
+  if (stop) throw stop;
 
   const confirmed = [];
   for (let i = 0; i < plan.moves.length; i += 1) {
@@ -490,7 +514,7 @@ async function confirmMoves(srcRoot, dstRoot, plan) {
 
 // Один план на весь запуск: ветки объединяются, и только потом ищутся перемещения.
 // Иначе перенос файла между двумя выбранными ветками остался бы незамеченным.
-async function buildRunPlan(srcRoot, dstRoot, folders, excludes, scan) {
+async function buildRunPlan(srcRoot, dstRoot, folders, excludes, scan, onMoves = null) {
   const merged = { copy: [], overwrite: [], trash: [], unchanged: [] };
   const srcDirs = [];
   const dstDirs = [];
@@ -510,7 +534,7 @@ async function buildRunPlan(srcRoot, dstRoot, folders, excludes, scan) {
   }
 
   const plan = detectMoves(merged);
-  await confirmMoves(srcRoot, dstRoot, plan);
+  await confirmMoves(srcRoot, dstRoot, plan, onMoves);
   plan.dirs = planDirs(srcDirs, dstDirs);
   plan.conflicts = topPaths(conflicts);
   // Закрытые правами папки в план работ не входят, но пользователю о них сказать

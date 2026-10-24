@@ -4,6 +4,21 @@ What changed for the user in each release. The full text of each release, in Eng
 Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
 [releases page](https://github.com/ALEXalesha/SyncGlass/releases).
 
+## Unreleased - big trees (both versions; the C# part follows)
+
+- Preview of a tree after moving folders "hung": the file counter stopped at the last scanned number (1 030 009 on
+  the author's tree) for tens of minutes. The scan was done; the app was checking hundreds of thousands of move
+  candidates by reading the start and end of both files, the receiver over the network, without a word. Now the
+  preview says "Checking moves: X of Y", the sync shows the same step, Cancel stops it, and the check runs 64 at
+  a time (the reads are tiny, the network delay is what costs). 200 000 moves with 5 ms per pair: 231 s of silence
+  before, 53 s with progress every 0.15 s now. The last scan count is no longer lost.
+- "Skip junk" (on by default): node_modules, .venv, __pycache__, .pytest_cache, .hypothesis, .ruff_cache and
+  .mypy_cache are not counted, not copied and not deleted on the receiver (npm ci / uv sync rebuild them), and the
+  tree does not show them. Both roads - the live scan and the background index - see the same. Off = as before.
+- Laws: test/million.test.js (progress to done = total without long silence, Cancel reaches the check, a plan with
+  junk equals the plan of the same tree without it on both roads, the tree hides junk, the receiver's junk stays,
+  off = synced like any folder); 7 mutants, all caught.
+
 ## 1.2.4 - 2026-09-26 - Electron icon
 
 - Electron: the version had no icon of its own - the taskbar, the shortcut and the

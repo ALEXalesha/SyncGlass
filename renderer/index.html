@@ -65,6 +65,10 @@
             <option value="date">По дате</option>
           </select>
         </label>
+        <label class="junk-toggle" title="node_modules, .venv, __pycache__ и кеши тестов: не считаются, не копируются и на приёмнике не удаляются - их пересоберут npm ci / uv sync. Выключите, чтобы синхронизировать всё.">
+          <input type="checkbox" id="skipJunk" checked />
+          <span>Без мусора</span>
+        </label>
         <div class="sb-bar" id="sbBar" hidden><span></span></div>
       </div>
 
