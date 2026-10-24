@@ -6,16 +6,13 @@
 
 [Download for Windows](https://github.com/ALEXalesha/SyncGlass/releases/latest) &nbsp;·&nbsp; [Русская версия этого файла](README.ru.md)
 
-[![CI](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml/badge.svg)](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ALEXalesha/SyncGlass?color=16a34a)](https://github.com/ALEXalesha/SyncGlass/releases/latest)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen)](#) [![Release](https://img.shields.io/github/v/release/ALEXalesha/SyncGlass)](https://github.com/ALEXalesha/SyncGlass/releases/latest) [![CI](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml/badge.svg)](https://github.com/ALEXalesha/SyncGlass/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![WPF](https://img.shields.io/badge/.NET_WPF-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/desktop/wpf/) [![Electron](https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/) [![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
+
+Code, tests and docs are written by Claude (Anthropic) in Claude Code. Ideas, testing and decisions - Alexey.
 
 <img src="docs/screenshots/window.png" width="860" alt="Two trees: the local folder with ticks on the left, the network folder on the right">
 
 </div>
-
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-D97757?logo=claude&logoColor=white)](https://claude.com/claude-code)
-Code, tests and docs are written by Claude (Anthropic) in Claude Code. Ideas, testing and decisions - Alexey.
 
 > **The interface is in Russian**, and so is the long write-up, [README.ru.md](README.ru.md), which this file summarises. In the screenshot, «Локально» is the local side, «Сеть» the network side, «Локально → Сеть» the direction, and «Синхронизировать» the sync button.
 
