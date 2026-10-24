@@ -4,7 +4,7 @@ What changed for the user in each release. The full text of each release, in Eng
 Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
 [releases page](https://github.com/ALEXalesha/SyncGlass/releases).
 
-## Unreleased - big trees (both versions)
+## 1.3.0 - 2026-10-24 - big trees
 
 - Preview of a tree after moving folders "hung": the file counter stopped at the last scanned number (1 030 009 on
   the author's tree) for tens of minutes. The scan was done; the app was checking hundreds of thousands of move

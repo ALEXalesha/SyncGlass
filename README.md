@@ -27,22 +27,22 @@ The local folder is on the left, the network folder on the right. Tick what to s
 - **Names are case-insensitive**, as in Windows itself: `Docs` and `docs` are the same folder.
 - **The window opens where it was closed** (1.1.0). The saved place is checked against the monitors present now: if that monitor has been unplugged, the window opens centred on the main one, and its title bar always stays on a screen. The rule is the same module as in the author's calculators and Paint Pro, with property tests over random screen layouts.
 - **Sizes are counted without eating memory** (1.1.1). The background scan used to queue a task for every file at once: on a folder with 300,000 entries the process grew to 700 MB and the scan took 33 seconds. Now a fixed number of workers take the next folder or file from a stack: the same scan takes 5.5 seconds with a peak of 140 MB.
-- **Big trees do not hang** (unreleased, 24.10). After folders are moved, the preview checks every move candidate by reading the start and end of both files; on a tree of a million files that took tens of minutes in silence, and the counter looked frozen (1 030 009). Now it says "Checking moves: X of Y", Cancel stops it, and 64 checks run at once (200 000 moves: 231 s of silence before, 53 s with progress now).
-- **Skip junk** (unreleased, on by default): `node_modules`, `.venv`, `__pycache__` and test caches are not counted, not copied and not deleted on the receiver - `npm ci` / `uv sync` rebuild them. Untick it to sync everything.
+- **Big trees do not hang** (1.3.0). After folders are moved, the preview checks every move candidate by reading the start and end of both files; on a tree of a million files that took tens of minutes in silence, and the counter looked frozen (1 030 009). Now it says "Checking moves: X of Y", Cancel stops it, and 64 checks run at once (200 000 moves: 231 s of silence before, 53 s with progress now).
+- **Skip junk** (1.3.0, on by default): `node_modules`, `.venv`, `__pycache__` and test caches are not counted, not copied and not deleted on the receiver - `npm ci` / `uv sync` rebuild them. Untick it to sync everything.
 - **An unreachable side blocks the run.** A missing folder reads as empty, and syncing against an empty side would delete everything on the other one.
 
 <img src="docs/screenshots/preview.png" width="860" alt="The preview: how many files to move, copy, overwrite and delete">
 
 **Deletion is permanent, and the preview always says so.** It used to go to the Windows Recycle Bin, but the bin refuses network paths, so network deletions went direct and the two sides were told apart by the look of the path. The same share mapped as a drive letter (`Z:`) did not match that rule: the preview promised the Recycle Bin while the deletion bypassed it. A promise that depends on which of two spellings a network folder has is worse than no promise, so the Recycle Bin was removed entirely: one behaviour everywhere, one warning everywhere.
 
-## Two versions (1.2.4)
+## Two versions (1.3.0)
 
 Since 1.2.0 SyncGlass comes in two builds that do the same job and share everything:
 
 | | Electron | C# / WPF |
 |---|---|---|
 | Code | repository root: `main.js`, `renderer/`, `src/` | `csharp/` |
-| Download | `SyncGlass Setup 1.2.4.exe`, `SyncGlass-1.2.4-portable.exe` | `SyncGlass-CSharp-Setup-1.2.4.exe`, `SyncGlass-CSharp-1.2.4-portable.exe` |
+| Download | `SyncGlass Setup 1.3.0.exe`, `SyncGlass-1.3.0-portable.exe` | `SyncGlass-CSharp-Setup-1.3.0.exe`, `SyncGlass-CSharp-1.3.0-portable.exe` |
 | Tests | 212 on `node --test` | 266 on xUnit |
 
 - **One set of files.** Settings, history, the size cache and the window position live in `%APPDATA%\SyncGlass` in one format; the C# contract tests read files written by the Electron version itself.
