@@ -383,6 +383,20 @@ async function sameContent(a, b) {
   return ea.equals(eb);
 }
 
+// Файл на миг занят антивирусом или индексатором Windows (EBUSY) - повторить через короткую паузу,
+// а не записывать в ошибки (CI GitHub 25.10: «ошибки на ровном месте», EBUSY на только что записанном файле).
+const BUSY_RETRIES = [50, 150, 400];
+async function copyRetryBusy(src, dst) {
+  for (let i = 0; ; i++) {
+    try {
+      return await fsp.copyFile(src, dst);
+    } catch (err) {
+      if (err.code !== 'EBUSY' || i >= BUSY_RETRIES.length) throw err;
+      await new Promise((r) => setTimeout(r, BUSY_RETRIES[i]));
+    }
+  }
+}
+
 // Возвращает true если скопировал, false если источник исчез (устаревшие данные).
 // ensure — чем создавать папку назначения. По умолчанию обычный mkdir, но
 // синхронизация передаёт сюда свой кеш: без него каждый файл тянул за собой
@@ -394,13 +408,13 @@ async function copyFile(srcRoot, dstRoot, relPath, ensure = ensureDir) {
 
   await ensure(path.dirname(dst));
   try {
-    await fsp.copyFile(src, dst);
+    await copyRetryBusy(src, dst);
   } catch (err) {
     if (err.code === 'ENOENT') return false; // источник исчез с момента сканирования
     if (err.code === 'EPERM' || err.code === 'EACCES') {
       // приёмник, вероятно, read-only — снимаем атрибут и пробуем снова
       await fsp.chmod(dst, 0o666).catch(() => {});
-      await fsp.copyFile(src, dst);
+      await copyRetryBusy(src, dst);
     } else {
       throw err;
     }

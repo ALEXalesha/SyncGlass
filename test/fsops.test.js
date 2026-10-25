@@ -733,3 +733,28 @@ test('оригинал возвращается поверх того, что з
   );
   assert.ok(!fs.existsSync(path.join(dst, STAGE_DIR)));
 });
+
+test('занятый на миг файл (EBUSY) копируется повтором, а не уходит в ошибки', async () => {
+  // CI GitHub 25.10: антивирус держал только что записанный файл - «ошибки на ровном месте»
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { copyFile } = require('../src/fsops');
+  const src = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-busy-src-'));
+  const dst = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-busy-dst-'));
+  fs.writeFileSync(path.join(src, 'a.txt'), 'привет');
+  const real = fs.promises.copyFile;
+  let calls = 0;
+  fs.promises.copyFile = async (...args) => {
+    calls += 1;
+    if (calls <= 2) throw Object.assign(new Error('busy'), { code: 'EBUSY' });
+    return real(...args);
+  };
+  try {
+    assert.strictEqual(await copyFile(src, dst, 'a.txt'), true);
+  } finally {
+    fs.promises.copyFile = real;
+  }
+  assert.strictEqual(calls, 3);
+  assert.strictEqual(fs.readFileSync(path.join(dst, 'a.txt'), 'utf8'), 'привет');
+});
