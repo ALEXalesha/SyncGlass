@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/icon.png" width="96" alt="">
+
 # SyncGlass
 
 **Folder sync between a laptop and a networked PC. The destination becomes an exact copy of the source, moves are recognised as moves, and the Stop button puts everything back the way it was.**
