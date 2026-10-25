@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, screen, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs').promises;
@@ -361,6 +361,9 @@ function createWindow() {
   const saved = WindowState.load(windowStatePath());
   const fixed = saved && typeof saved === 'object' ? { ...saved, width: WINDOW_SIZE.width, height: WINDOW_SIZE.height } : saved;
   const placed = WindowState.restore(fixed, areas, WINDOW_SIZE);
+  // Системная строка меню Electron («File Edit View Window») - по-английски и без стиля (ревью 23.10):
+  // у программы своих меню нет, вставка в поля работает и без неё.
+  Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     ...(placed.x !== undefined ? { x: placed.x, y: placed.y } : {}),
     width: WINDOW_SIZE.width,

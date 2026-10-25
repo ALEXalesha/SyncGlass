@@ -72,11 +72,11 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
         var progress = new Progress<int>(scanned =>
         {
             lastScanned = scanned;
-            Message("empty", $"Сканирую выбранное… {Format.FmtNum(scanned)} файлов");
+            Message("empty", $"Сканирую выбранное… {Format.Count(scanned, Format.Files)}");
         });
         // Сверка перемещений после скана (24.10): своё сообщение вместо застывшего счётчика.
         var moves = new Progress<(int Done, int Total)>(m =>
-            Message("empty", $"Просканировано {Format.FmtNum(lastScanned)} файлов. Сверяю перемещения: {Format.FmtNum(m.Done)} из {Format.FmtNum(m.Total)}"));
+            Message("empty", $"Просканировано {Format.Count(lastScanned, Format.Files)}. Сверяю перемещения: {Format.FmtNum(m.Done)} из {Format.FmtNum(m.Total)}"));
         PreviewResult result;
         try
         {
@@ -194,8 +194,6 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
         else await RunSync();
     }
 
-    private static readonly System.Globalization.CultureInfo Ru = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
-
     private static readonly Dictionary<string, string> ActionVerb = new()
     {
         ["move"] = "перемещаю",
@@ -228,7 +226,7 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
             if (p.Action == "scan")
             {
                 ProgressIndeterminate = true;
-                ProgressText = $"Читаю папки: {p.Done.ToString("N0", Ru)} файлов";
+                ProgressText = $"Читаю папки: {Format.Count(p.Done, Format.Files)}";
                 return;
             }
             ProgressIndeterminate = false;
@@ -263,18 +261,18 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
                 ProgressText = "Остановлено, всё возвращено как было";
                 Message("note", "Синхронизация прервана. Скопированное удалено, перезаписанное и удалённое возвращено на место.");
                 if (res.Unrecoverable > 0)
-                    Notices.Add(new Notice("warn", $"⚠ {res.Unrecoverable} файлов вернуть не удалось: их пришлось обработать напрямую (обычно слишком длинный путь). Удалённые стёрты безвозвратно; перезаписанные заменены версией с источника."));
+                    Notices.Add(new Notice("warn", $"⚠ {Format.Count(res.Unrecoverable, Format.Files)} вернуть не удалось: их пришлось обработать напрямую (обычно слишком длинный путь). Удалённые стёрты безвозвратно; перезаписанные заменены версией с источника."));
             }
             else
             {
                 var skip = res.SkippedTotal > 0
-                    ? new Notice("note", $"Пропущено без доступа: {res.SkippedTotal} папок и файлов. Они не тронуты ни на одной стороне.")
+                    ? new Notice("note", $"Пропущено без доступа: {Format.Count(res.SkippedTotal, Format.Objects)}. Они не тронуты ни на одной стороне.")
                     : null;
                 if (res.Failures > 0)
                 {
-                    ProgressText = $"Готово с ошибками: {res.Failures} файлов не удалось";
+                    ProgressText = $"Готово с ошибками: не удалось - {Format.Count(res.Failures, Format.Files)}";
                     var sample = string.Join("\n", res.FailuresSample ?? []);
-                    Message("warn", $"⚠ Не удалось обработать {res.Failures} файлов (нет прав или заняты):\n{sample}{(res.Failures > 5 ? "\n…" : "")}");
+                    Message("warn", $"⚠ Не удалось обработать {Format.Count(res.Failures, Format.Files)} (нет прав или заняты):\n{sample}{(res.Failures > 5 ? "\n…" : "")}");
                     if (skip != null) Notices.Add(skip);
                 }
                 else

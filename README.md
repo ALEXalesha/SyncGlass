@@ -43,7 +43,7 @@ Since 1.2.0 SyncGlass comes in two builds that do the same job and share everyth
 |---|---|---|
 | Code | repository root: `main.js`, `renderer/`, `src/` | `csharp/` |
 | Download | `SyncGlass Setup 1.3.0.exe`, `SyncGlass-1.3.0-portable.exe` | `SyncGlass-CSharp-Setup-1.3.0.exe`, `SyncGlass-CSharp-1.3.0-portable.exe` |
-| Tests | 214 on `node --test` | 269 on xUnit |
+| Tests | 218 on `node --test` | 271 on xUnit |
 
 - **One set of files.** Settings, history, the size cache and the window position live in `%APPDATA%\SyncGlass` in one format; the C# contract tests read files written by the Electron version itself.
 - **Their own icons.** Since 1.2.4 the Electron version has two circular arrows on accent-coloured glass (`assets/icon.*`, drawn by `npx electron tools/make-icon.js`; the same drawing is the logo in the window header). The C# version keeps its two panes with an arrow (`csharp/tools/generate-icon.ps1`), so the two are easy to tell apart on the taskbar.

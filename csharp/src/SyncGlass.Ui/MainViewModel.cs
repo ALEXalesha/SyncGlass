@@ -512,7 +512,7 @@ public sealed partial class MainViewModel : ObservableObject, ICrawlSink
         var size = side == "local" ? s.SizeLocal : s.SizeNetwork;
         var cnt = side == "local" ? s.CntLocal : s.CntNetwork;
         if (size == null) return ("", true);
-        if (node.IsDir) return ($"{Format.FmtNum(cnt ?? 0)} файлов · {Format.FormatSize(size)}", false);
+        if (node.IsDir) return ($"{Format.Count(cnt ?? 0, Format.Files)} · {Format.FormatSize(size)}", false);
         return (Format.FormatSize(size), false);
     }
 
@@ -561,15 +561,15 @@ public sealed partial class MainViewModel : ObservableObject, ICrawlSink
     void ICrawlSink.Progress(int scanned, List<SizeEntry> entries) => _post(() =>
     {
         MergeSizes(entries);
-        SetStatus("busy", "Загрузка размеров и файлов…", $"{Format.FmtNum(scanned)} объектов");
+        SetStatus("busy", "Загрузка размеров и файлов…", Format.Count(scanned, Format.Objects));
     });
 
     void ICrawlSink.Done(CrawlDone d) => _post(() =>
     {
         // partial - сторона пропала посреди обхода: размеры неполные, и «Готово» выдало бы
         // их за полную картину. noAccess - папки на месте, но внутрь не пускают.
-        var n = $"{Format.FmtNum(d.Scanned)} объектов";
-        if (d.Ok && !d.Partial && d.NoAccess > 0) SetStatus("done", $"Готово, {d.NoAccess} папок и файлов без доступа", n);
+        var n = Format.Count(d.Scanned, Format.Objects);
+        if (d.Ok && !d.Partial && d.NoAccess > 0) SetStatus("done", $"Готово, без доступа: {Format.Count(d.NoAccess, Format.Objects)}", n);
         else if (d.Ok && d.Partial) SetStatus("error", "Связь оборвалась — размеры неполные, нажмите «Обновить»", n);
         else if (d.Ok) SetStatus("done", "Готово", n);
         else if (d.TooBig) SetStatus("error", "Слишком много файлов — подсчёт размеров остановлен", $"{Format.FmtNum(d.Scanned)}+");

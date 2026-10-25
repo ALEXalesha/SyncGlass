@@ -92,6 +92,27 @@ function fmtNum(n) {
   return n.toLocaleString('ru-RU');
 }
 
+// Склонение по числу (ревью 23.10: «1 файлов», «2 файлов»): plural(2, 'файл', 'файла', 'файлов') - «файла».
+function plural(n, one, few, many) {
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b === 1) return one;
+  return b >= 2 && b <= 4 ? few : many;
+}
+const FILES = ['файл', 'файла', 'файлов'];
+const OBJECTS = ['объект', 'объекта', 'объектов'];
+// «1 файл», «2 файла», «5 файлов» - число с разрядами и слово в нужной форме.
+function count(n, forms) {
+  return `${fmtNum(n)} ${plural(n, forms[0], forms[1], forms[2])}`;
+}
+
+// Путь в шапке панели. У подписи direction: rtl (многоточие слева у длинного пути), а при rtl
+// обратные косые из начала строки уезжали в конец: «\\ПК\Drive» показывался как «ПК\Drive\\»
+// (ревью 23.10). Метки «слева направо» по краям держат порядок символов как есть.
+function pathLabel(dir) {
+  return dir ? `\u200E${dir}\u200E` : 'путь не выбран';
+}
+
 // Счётчик в плашке предпросмотра. Плашка узкая - четыре в ряд в окне 900 px, - а
 // счёт бывает шестизначным, и во время работы там стояло ещё «сделано/всего»:
 // такие числа вылезали за рамку. Теперь число с разрядами, шрифт уменьшается по
@@ -292,11 +313,11 @@ function setPath(side, dir) {
   if (side === 'local') {
     state.localPath = dir;
     el.localPath.value = dir;
-    el.localPathLabel.textContent = dir || 'путь не выбран';
+    el.localPathLabel.textContent = pathLabel(dir);
   } else {
     state.networkPath = dir;
     el.networkPath.value = dir;
-    el.networkPathLabel.textContent = dir || 'путь не выбран';
+    el.networkPathLabel.textContent = pathLabel(dir);
   }
 }
 document.querySelectorAll('[data-pick]').forEach((btn) => {
@@ -556,7 +577,7 @@ function metaFor(node, side) {
   const size = side === 'local' ? s.sizeLocal : s.sizeNetwork;
   const cnt = side === 'local' ? s.cntLocal : s.cntNetwork;
   if (size == null) return { text: '', dim: true };
-  if (node.isDir) return { text: `${fmtNum(cnt)} файлов · ${formatSize(size)}`, dim: false };
+  if (node.isDir) return { text: `${count(cnt, FILES)} · ${formatSize(size)}`, dim: false };
   return { text: formatSize(size), dim: false };
 }
 
@@ -698,7 +719,7 @@ window.api.onCrawl({
   },
   onProgress: ({ scanned, entries }) => {
     mergeSizes(entries);
-    setStatus('busy', 'Загрузка размеров и файлов…', `${fmtNum(scanned)} объектов`);
+    setStatus('busy', 'Загрузка размеров и файлов…', count(scanned, OBJECTS));
   },
   onDone: ({ scanned, ok, toobig, partial, noAccess }) => {
     // partial — сторона пропала посреди обхода. Размеры показать можно, но они
@@ -706,10 +727,10 @@ window.api.onCrawl({
     // noAccess — другое: папки на месте, но внутрь не пускают. Звать чинить
     // связь тут незачем, а знать про пропуск всё равно нужно.
     if (ok && !partial && noAccess)
-      setStatus('done', `Готово, ${noAccess} папок и файлов без доступа`, `${fmtNum(scanned)} объектов`);
+      setStatus('done', `Готово, без доступа: ${count(noAccess, OBJECTS)}`, count(scanned, OBJECTS));
     else if (ok && partial)
-      setStatus('error', 'Связь оборвалась — размеры неполные, нажмите «Обновить»', `${fmtNum(scanned)} объектов`);
-    else if (ok) setStatus('done', 'Готово', `${fmtNum(scanned)} объектов`);
+      setStatus('error', 'Связь оборвалась — размеры неполные, нажмите «Обновить»', count(scanned, OBJECTS));
+    else if (ok) setStatus('done', 'Готово', count(scanned, OBJECTS));
     else if (toobig)
       setStatus('error', 'Слишком много файлов — подсчёт размеров остановлен', `${fmtNum(scanned)}+`);
     else setStatus('error', 'Не удалось загрузить размеры');
@@ -746,8 +767,8 @@ async function openPreview() {
   const unsub = window.api.onPreviewProgress(({ scanned, phase, done, total }) => {
     el.previewSummary.innerHTML =
       phase === 'moves'
-        ? `<div class="empty">Просканировано ${scanned.toLocaleString('ru-RU')} файлов. Сверяю перемещения: ${done.toLocaleString('ru-RU')} из ${total.toLocaleString('ru-RU')}</div>`
-        : `<div class="empty">Сканирую выбранное… ${scanned.toLocaleString('ru-RU')} файлов</div>`;
+        ? `<div class="empty">Просканировано ${count(scanned, FILES)}. Сверяю перемещения: ${done.toLocaleString('ru-RU')} из ${total.toLocaleString('ru-RU')}</div>`
+        : `<div class="empty">Сканирую выбранное… ${count(scanned, FILES)}</div>`;
   });
 
   let result;
@@ -926,7 +947,7 @@ async function runSync() {
     // молчаливого «Начинаю…» (Алексей 25.10: окно долго стояло без цифр).
     if (action === 'scan') {
       el.progressBar.classList.add('indeterminate');
-      el.progressText.textContent = `Читаю папки: ${done.toLocaleString('ru-RU')} файлов`;
+      el.progressText.textContent = `Читаю папки: ${count(done, FILES)}`;
       return;
     }
     el.progressBar.classList.remove('indeterminate');
@@ -968,7 +989,7 @@ async function runSync() {
       // удалённые стёрты сразу, перезаписанные затёрты копией с источника.
       // Отправлять человека искать их в Корзине нельзя — Корзина не участвует.
       const lost = res.unrecoverable
-        ? `<div class="preview-warn">⚠ ${res.unrecoverable} файлов вернуть не удалось: их пришлось обработать напрямую (обычно слишком длинный путь). Удалённые стёрты безвозвратно; перезаписанные заменены версией с источника.</div>`
+        ? `<div class="preview-warn">⚠ ${count(res.unrecoverable, FILES)} вернуть не удалось: их пришлось обработать напрямую (обычно слишком длинный путь). Удалённые стёрты безвозвратно; перезаписанные заменены версией с источника.</div>`
         : '';
       el.previewSummary.innerHTML =
         '<div class="preview-note">Синхронизация прервана. Скопированное удалено, перезаписанное и удалённое возвращено на место.</div>' + lost;
@@ -980,12 +1001,12 @@ async function runSync() {
       // Закрытые правами узлы не ошибка и не работа — но и не «всё сделано».
       const skip =
         res && res.skippedTotal
-          ? `<div class="preview-note">Пропущено без доступа: ${res.skippedTotal} папок и файлов. Они не тронуты ни на одной стороне.</div>`
+          ? `<div class="preview-note">Пропущено без доступа: ${count(res.skippedTotal, OBJECTS)}. Они не тронуты ни на одной стороне.</div>`
           : '';
       if (res && res.failures) {
-        el.progressText.textContent = `Готово с ошибками: ${res.failures} файлов не удалось`;
+        el.progressText.textContent = `Готово с ошибками: не удалось - ${count(res.failures, FILES)}`;
         const sample = (res.failuresSample || []).map((s) => escapeHtml(s)).join('<br>');
-        el.previewSummary.innerHTML = `<div class="preview-warn">⚠ Не удалось обработать ${res.failures} файлов (нет прав или заняты):<br>${sample}${res.failures > 5 ? '<br>…' : ''}</div>${skip}`;
+        el.previewSummary.innerHTML = `<div class="preview-warn">⚠ Не удалось обработать ${count(res.failures, FILES)} (нет прав или заняты):<br>${sample}${res.failures > 5 ? '<br>…' : ''}</div>${skip}`;
       } else {
         el.progressText.textContent = 'Готово ✓';
         if (skip) el.previewSummary.innerHTML = skip;

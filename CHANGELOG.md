@@ -11,6 +11,9 @@ Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
   Run). A file that changed and shows up in a new scan is checked again. The check runs 128 at a time instead of 64.
 - "Run" shows "Reading folders: N files" while it reads both sides, instead of a silent "Starting...".
 - Both versions: the Electron one and the C# one (same cache, same 15 minutes, 128 checks at a time, the same "Reading folders" counter).
+- Numbers agree with their nouns in Russian: "1 файл", "2 файла", "5 файлов" instead of "1 файлов" (one shared function in each version, a law over 0..1000 and random big numbers, and a law that no number in the window text is written before a noun without it).
+- The network path in the panel header is shown in the same order as in the field ("\\PC\Drive" was shown as "PC\Drive\\" because of the right-to-left trick that puts the ellipsis on the left).
+- Electron version: the system menu bar ("File Edit View Window", in English and unstyled) is gone.
 
 ## 1.3.0 - 2026-10-24 - big trees
 

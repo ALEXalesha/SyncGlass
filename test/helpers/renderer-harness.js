@@ -51,6 +51,7 @@ var __api = {
   onSelectAll, markKey, inheritedIncluded, hasDescendantMark, updateControls,
   metaFor, mergeSizes, sortNodes, formatSize, escapeHtml, historyFilesHtml,
   lightRelistTop, isExpanded, expandKey, makeNode, renderPreview, el,
+  plural, count, pathLabel, FILES, OBJECTS,
 };`;
 
 const idleApi = {

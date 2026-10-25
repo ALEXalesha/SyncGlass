@@ -16,6 +16,7 @@ function electronStub(userDataDir, handlers, trashed, appEvents, windows) {
   const display = { id: 1, workArea: { x: 0, y: 0, width: 1920, height: 1040 } };
   return {
     screen: { getPrimaryDisplay: () => display, getAllDisplays: () => [display] },
+    Menu: { setApplicationMenu: () => {} },
     app: {
       getPath: () => userDataDir,
       requestSingleInstanceLock: () => true,

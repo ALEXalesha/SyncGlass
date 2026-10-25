@@ -302,7 +302,7 @@ public class ViewModelTests
         Assert.Equal("нет в сети", vm.MetaFor(n, "network").Text);
         Assert.Equal("", vm.MetaFor(n, "local").Text);
         vm.MergeSizes([new SizeEntry("док", 2048, 3, null, null)]);
-        Assert.Contains("3 файлов", vm.MetaFor(n, "local").Text);
+        Assert.Contains("3 файла", vm.MetaFor(n, "local").Text);
     }
 
     [Fact]
@@ -491,7 +491,7 @@ public class ViewModelTests
         vm.MergeSizes([new SizeEntry("a", 10, 1, null, null)]);
         Assert.Same(rowA, vm.Rows[0]);
         Assert.Equal(0, changes); // сброс списка сбросил бы и прокрутку
-        Assert.Contains("1 файлов", rowA.LocalMeta);
+        Assert.Contains("1 файл", rowA.LocalMeta);
     }
 
     [Fact]

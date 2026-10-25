@@ -240,7 +240,7 @@ test('размер строки находится при другом напи�
   assert.strictEqual(api.metaFor(n, 'network').text, 'нет в сети');
   assert.strictEqual(api.metaFor(n, 'local').text, '');
   api.mergeSizes([{ relPath: 'док', sizeLocal: 2048, cntLocal: 3, sizeNetwork: null, cntNetwork: null }]);
-  assert.match(api.metaFor(n, 'local').text, /3 файлов/);
+  assert.match(api.metaFor(n, 'local').text, /3 файла/);
 });
 
 test('шкала размеров не кончается раньше числа', () => {

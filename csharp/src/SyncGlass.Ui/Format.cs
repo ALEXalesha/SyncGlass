@@ -22,6 +22,22 @@ public static class Format
     // Разряды как у toLocaleString('ru-RU'): неразрывный пробел.
     public static string FmtNum(long n) => n.ToString("N0", Ru);
 
+    // Склонение по числу, как plural в renderer.js (ревью 23.10: «1 файлов», «2 файлов»).
+    public static string Plural(long n, string one, string few, string many)
+    {
+        var a = Math.Abs(n) % 100;
+        var b = a % 10;
+        if (a > 10 && a < 20) return many;
+        if (b == 1) return one;
+        return b is >= 2 and <= 4 ? few : many;
+    }
+
+    public static readonly string[] Files = ["файл", "файла", "файлов"];
+    public static readonly string[] Objects = ["объект", "объекта", "объектов"];
+
+    // «1 файл», «2 файла», «5 файлов» - число с разрядами и слово в нужной форме.
+    public static string Count(long n, string[] forms) => $"{FmtNum(n)} {Plural(n, forms[0], forms[1], forms[2])}";
+
     // Счётчик в плашке предпросмотра: плашка узкая, четыре в ряд, а число бывает
     // шестизначным - шрифт мельчает по длине записи (классы как в styles.css).
     public static string NumSize(string text) => text.Length switch
