@@ -25,7 +25,8 @@ function electronStub(userDataDir, handlers, trashed, appEvents, windows) {
       quit: () => {},
     },
     BrowserWindow: class {
-      constructor(options) { windows.push(options); }
+      constructor(options) { this.options = options; windows.push(options); }
+      maximize() { this.options.maximizedOnStart = true; }
       loadFile() {}
       on() {}
       isDestroyed() { return false; }

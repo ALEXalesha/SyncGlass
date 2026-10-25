@@ -92,14 +92,28 @@ test('обрезанный или пустой файл - окно по умол
   }
 });
 
-test('main.js открывает окно на сохранённом месте и с постоянным размером', async () => {
-  const saved = { x: 321, y: 123, width: 1400, height: 1000, maximized: false };
+// С 1.3.1 окно тянется и разворачивается (Алексей 25.10 «да»): место, размер и развёрнутость - из файла,
+// меньше 900x600 не бывает.
+test('main.js открывает окно на сохранённом месте и сохранённого размера, растягиваемым', async () => {
+  const saved = { x: 321, y: 123, width: 1400, height: 900, maximized: false };
   const { windows } = await loadMain({
     seed: (dir) => fs.promises.writeFile(path.join(dir, 'window-state.json'), JSON.stringify(saved)),
   });
   assert.strictEqual(windows.length, 1);
   const o = windows[0];
-  assert.deepStrictEqual([o.x, o.y, o.width, o.height, o.resizable], [321, 123, 900, 600, false]);
+  assert.deepStrictEqual([o.x, o.y, o.width, o.height, o.resizable, o.maximizable], [321, 123, 1400, 900, true, true]);
+  assert.deepStrictEqual([o.minWidth, o.minHeight], [900, 600]);
+  assert.strictEqual(o.maximizedOnStart, undefined, 'не развёрнутое - не разворачивается');
+});
+
+test('развёрнутое окно открывается развёрнутым, слишком маленькое - не меньше 900x600', async () => {
+  const { windows } = await loadMain({
+    seed: (dir) => fs.promises.writeFile(path.join(dir, 'window-state.json'),
+      JSON.stringify({ x: 10, y: 10, width: 300, height: 200, maximized: true })),
+  });
+  const o = windows[0];
+  assert.deepStrictEqual([o.width, o.height], [900, 600]);
+  assert.strictEqual(o.maximizedOnStart, true);
 });
 
 test('модуль тот же, что в калькуляторах, кроме комментариев сверху', (t) => {

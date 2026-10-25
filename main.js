@@ -16,7 +16,8 @@ const {
 const { rootsOverlap, ciKey } = require('./src/paths');
 const WindowState = require('./src/window-state');
 
-// Место окна между запусками: userData\window-state.json. Размер у окна постоянный.
+// Место, размер и развёрнутость окна между запусками: userData\window-state.json. С 1.3.1 окно тянется и
+// разворачивается (Алексей 25.10: «да» - на большом экране списки папок тесные), меньше 900x600 не бывает.
 const WINDOW_SIZE = { width: 900, height: 600, minWidth: 900, minHeight: 600 };
 const windowStatePath = () => path.join(app.getPath('userData'), 'window-state.json');
 
@@ -356,20 +357,19 @@ function createWindow() {
   // мониторам: монитор отключили - окно по центру основного, заголовок всегда на экране.
   const primary = screen.getPrimaryDisplay();
   const areas = [primary, ...screen.getAllDisplays().filter((d) => d.id !== primary.id)].map((d) => d.workArea);
-  // Размер из файла не в счёт: окно всегда 900x600, и придвигать к краю надо его, а не
-  // то, что там записано (иначе окно с «чужим» размером в файле уезжало вверх).
-  const saved = WindowState.load(windowStatePath());
-  const fixed = saved && typeof saved === 'object' ? { ...saved, width: WINDOW_SIZE.width, height: WINDOW_SIZE.height } : saved;
-  const placed = WindowState.restore(fixed, areas, WINDOW_SIZE);
+  // Размер из файла обрезается restore: не меньше 900x600 и не больше самого большого экрана.
+  const placed = WindowState.restore(WindowState.load(windowStatePath()), areas, WINDOW_SIZE);
   // Системная строка меню Electron («File Edit View Window») - по-английски и без стиля (ревью 23.10):
   // у программы своих меню нет, вставка в поля работает и без неё.
   Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     ...(placed.x !== undefined ? { x: placed.x, y: placed.y } : {}),
-    width: WINDOW_SIZE.width,
-    height: WINDOW_SIZE.height,
-    resizable: false,
-    maximizable: false,
+    width: placed.width,
+    height: placed.height,
+    minWidth: WINDOW_SIZE.minWidth,
+    minHeight: WINDOW_SIZE.minHeight,
+    resizable: true,
+    maximizable: true,
     fullscreenable: false,
     backgroundColor: '#1c2128',
     title: 'SyncGlass',
@@ -381,14 +381,15 @@ function createWindow() {
     },
   });
 
-  // Место пишется после каждого перемещения (событие приходит один раз в конце
-  // перетаскивания) и при закрытии; запись - через временный файл.
+  if (placed.maximized) mainWindow.maximize();
+
+  // Место и размер пишутся после каждого перемещения, растягивания, разворота (события приходят один
+  // раз в конце) и при закрытии; запись - через временный файл. Как в калькуляторах.
   const win = mainWindow;
   const remember = () => {
     if (!win.isDestroyed() && !win.isMinimized()) WindowState.save(windowStatePath(), WindowState.capture(win));
   };
-  win.on('moved', remember);
-  win.on('close', remember);
+  for (const event of ['moved', 'resized', 'maximize', 'unmaximize', 'close']) win.on(event, remember);
 
   // Без этого ссылка переживает само окно, и обработчик второго экземпляра
   // дёргает уничтоженный объект — Электрон отвечает на это исключением.

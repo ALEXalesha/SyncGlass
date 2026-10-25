@@ -94,18 +94,26 @@ public partial class MainWindow : Window
             Left = x;
             Top = y;
         }
-        // Место пишется после перемещения (с паузой - событие идёт на каждый шаг) и при закрытии.
-        LocationChanged += (_, _) =>
-        {
-            _savePlace.Stop();
-            _savePlace.Start();
-        };
+        Width = p.Width;
+        Height = p.Height;
+        if (p.Maximized) WindowState = System.Windows.WindowState.Maximized;
+        // Место и размер пишутся после перемещения и растягивания (с паузой - события идут на каждый шаг),
+        // сразу при развороте и при закрытии.
+        void Later(object? s, EventArgs a) { _savePlace.Stop(); _savePlace.Start(); }
+        LocationChanged += Later;
+        SizeChanged += (s, a) => Later(s, a);
+        StateChanged += (_, _) => { FitMaximized(); SavePlacement(); };
+        FitMaximized();
     }
 
     private void SavePlacement()
     {
-        if (PlacementFile == null || WindowState != System.Windows.WindowState.Normal) return;
-        Place.Save(PlacementFile, new Place.Placement(Math.Round(Left), Math.Round(Top), 900, 600, false));
+        if (PlacementFile == null || WindowState == System.Windows.WindowState.Minimized) return;
+        // У развёрнутого - границы, к которым оно вернётся (как getNormalBounds в Electron).
+        var b = WindowState == System.Windows.WindowState.Maximized ? RestoreBounds : new Rect(Left, Top, Width, Height);
+        if (b.IsEmpty) return;
+        Place.Save(PlacementFile, new Place.Placement(Math.Round(b.Left), Math.Round(b.Top), Math.Round(b.Width), Math.Round(b.Height),
+            WindowState == System.Windows.WindowState.Maximized));
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -152,6 +160,20 @@ public partial class MainWindow : Window
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = System.Windows.WindowState.Minimized;
+
+    private void Maximize_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == System.Windows.WindowState.Maximized ? System.Windows.WindowState.Normal : System.Windows.WindowState.Maximized;
+
+    // Развёрнутое окно со своим заголовком (WindowChrome) Windows выносит за край экрана на толщину рамки -
+    // отступ внутри на ту же толщину, иначе срезаны кнопки заголовка и края панелей. Значок: квадрат / два квадрата.
+    public void FitMaximized()
+    {
+        var max = WindowState == System.Windows.WindowState.Maximized;
+        var t = SystemParameters.WindowResizeBorderThickness;
+        RootGrid.Margin = max ? new Thickness(t.Left + 2, t.Top + 2, t.Right + 2, t.Bottom + 2) : new Thickness(0);
+        MaxIcon.Data = Geometry.Parse(max ? "M2,0 L9,0 L9,7 M0,2 L7,2 L7,9 L0,9 Z" : "M0,0 L9,0 L9,9 L0,9 Z");
+        MaxButton.ToolTip = max ? "Восстановить" : "Развернуть";
+    }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 

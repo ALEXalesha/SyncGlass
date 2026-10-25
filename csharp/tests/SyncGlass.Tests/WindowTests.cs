@@ -116,6 +116,42 @@ public class WindowTests
         Assert.True(тёмные.Count == 0, "тёмный текст на тёмном окне: " + string.Join(", ", тёмные.Distinct()));
     }
 
+    // С 1.3.1 окно тянется и разворачивается (Алексей 25.10 «да»): не меньше 900x600, кнопка «Развернуть» в заголовке,
+    // у развёрнутого - отступ на толщину рамки (иначе WindowChrome срезает края), значок и подсказка меняются.
+    [Fact]
+    public async Task окно_тянется_и_разворачивается_не_меньше_900_на_600()
+    {
+        await WpfHost.Run(async () =>
+        {
+            var win = new MainWindow { PlacementFile = null, ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -3000, Top = 0 };
+            win.Attach(new MainViewModel(DemoApi()), null);
+            win.Show();
+            try
+            {
+                Assert.Equal(ResizeMode.CanResize, win.ResizeMode);
+                Assert.Equal((900.0, 600.0), (win.MinWidth, win.MinHeight));
+                Assert.True(System.Windows.Shell.WindowChrome.GetWindowChrome(win).ResizeBorderThickness.Left > 0, "края тянутся");
+                var root = (FrameworkElement)win.FindName("RootGrid");
+                var btn = (Button)win.FindName("MaxButton");
+                Assert.Equal(new Thickness(0), root.Margin);
+                Assert.Equal("Развернуть", btn.ToolTip);
+                win.WindowState = System.Windows.WindowState.Maximized;
+                await Task.Delay(30);
+                win.FitMaximized();
+                Assert.True(root.Margin.Left > 0 && root.Margin.Top > 0, "развёрнутое - с отступом на рамку");
+                Assert.Equal("Восстановить", btn.ToolTip);
+                win.WindowState = System.Windows.WindowState.Normal;
+                await Task.Delay(30);
+                win.FitMaximized();
+                Assert.Equal(new Thickness(0), root.Margin);
+            }
+            finally
+            {
+                win.Close();
+            }
+        });
+    }
+
     // Закон: строка дерева разложена как в Electron (styles.css: .folder-row gap 8px,
     // флажок 16px). Нашлось сравнением кадров 26.09.2026: у флажка без подписи оставался
     // отступ под подпись, флажок занимал 23 px, и имя папки уезжало вправо. И длинный
