@@ -4,7 +4,7 @@ What changed for the user in each release. The full text of each release, in Eng
 Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
 [releases page](https://github.com/ALEXalesha/SyncGlass/releases).
 
-## Unreleased
+## 1.3.1 - 2026-10-25 - Run starts copying right away
 
 - "Run" right after a preview no longer checks all move candidates a second time: the preview's results are reused
   for 15 minutes, like the scans themselves (on the author's tree the copying started only 1.5 hours after pressing
