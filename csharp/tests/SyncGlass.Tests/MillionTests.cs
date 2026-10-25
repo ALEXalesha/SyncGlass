@@ -6,6 +6,10 @@ namespace SyncGlass.Tests;
 // Перенос test/million.test.js (24.10, «зависло на 1 030 009»): сверка перемещений говорит
 // о себе и отменяется; «Без мусора» - мусор не видит ни одна дорога, на приёмнике он цел,
 // план с мусором и галочкой равен плану того же дерева без него; без галочки - как раньше.
+// «Без мусора» - общий static FsOps на процесс: пока этот класс снимает галочку, параллельный тест
+// видел бы другой ключ кеша размеров (\0all) - CI 1.3.0 краснел на ContractTests. Поэтому коллекция
+// без параллельности: её тесты идут, когда остальные уже закончили.
+[Collection("Общий FsOps")]
 public sealed class MillionTests : IDisposable
 {
     private readonly TempDir _userData = new();
@@ -152,3 +156,6 @@ public sealed class MillionTests : IDisposable
         Assert.Contains(list.Items, i => i.Name == "node_modules");
     }
 }
+
+[CollectionDefinition("Общий FsOps", DisableParallelization = true)]
+public class SharedFsOpsCollection;
