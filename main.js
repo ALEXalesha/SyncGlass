@@ -11,7 +11,7 @@ const os = require('os');
 const { summarize } = require('./src/sync');
 const { scanFiles, listChildren, crawlTree, applyPlan, restoreStage, setSkipJunk, isJunkDir } = require('./src/fsops');
 const {
-  buildRunPlan, countByFolder, scanFromIndex, groupIndexByBranch, groupExcludesByBranch,
+  buildRunPlan, clearMoveVerdicts, countByFolder, scanFromIndex, groupIndexByBranch, groupExcludesByBranch,
 } = require('./src/plan');
 const { rootsOverlap, ciKey } = require('./src/paths');
 const WindowState = require('./src/window-state');
@@ -479,7 +479,7 @@ ipcMain.handle('pick-folder', async () => {
 // force=true сбрасывает кеш сканов (кнопка «Обновить»).
 ipcMain.handle('list-folders', async (_event, { localPath, networkPath, relPath = '', force, needMtime = false }) => {
   if (force) {
-    scanCache.clear();
+    scanCache.clear(); clearMoveVerdicts();
     // «Обновить» жмут именно потому, что данные под руками устарели. Индекс
     // обхода — такие же данные: не сбросить его значило бы читать заново только
     // список папок, а план по-прежнему строить по старому снимку.
@@ -566,7 +566,7 @@ ipcMain.handle('set-skip-junk', (_event, on) => {
   setSkipJunk(on);
   crawlToken += 1;
   crawlData = null;
-  scanCache.clear();
+  scanCache.clear(); clearMoveVerdicts();
 });
 // Текущий обход — чтобы сохранить прогресс при закрытии окна.
 let activeCrawl = null; // { index, localPath, networkPath }
@@ -773,7 +773,7 @@ async function restoreBothStages(srcRoot, dstRoot) {
   );
   const restored = counts[0] + counts[1];
   if (restored > 0) {
-    scanCache.clear();
+    scanCache.clear(); clearMoveVerdicts();
     crawlData = null; // дерево изменилось — прежний индекс уже неверен
   }
   return restored;
@@ -924,11 +924,21 @@ async function performSync(event, { localPath, networkPath, folders, excludes = 
   };
   let plan;
   try {
-    plan = await buildRunPlan(srcRoot, dstRoot, folders, excludes, makeScanner(null, folders), onMoves);
+    // Живой скан на запуске (кеш предпросмотра старше SCAN_TTL_MS или его нет) - со счётчиком: раньше
+    // окно до первой цифры стояло на «Начинаю…» всё время чтения обеих сторон (Алексей 25.10).
+    let scanned = 0, scanSent = 0;
+    const onScanFile = () => {
+      scanned += 1;
+      const now = Date.now();
+      if (now - scanSent <= 150) return;
+      scanSent = now;
+      try { event.sender.send('sync-progress', { done: scanned, total: 0, action: 'scan', path: '' }); } catch { /* окна нет */ }
+    };
+    plan = await buildRunPlan(srcRoot, dstRoot, folders, excludes, makeScanner(onScanFile, folders), onMoves);
   } catch (err) {
     // Сорвался обычно обрыв связи. Что успели прочитать до него — уже под вопросом,
     // поэтому кеши сбрасываем: следующая попытка пойдёт за свежими данными.
-    scanCache.clear();
+    scanCache.clear(); clearMoveVerdicts();
     crawlData = null;
     return { error: `не удалось прочитать папки (${err.message})` };
   }
@@ -971,13 +981,13 @@ async function performSync(event, { localPath, networkPath, folders, excludes = 
       { shouldStop: () => syncStopped }
     );
   } catch (err) {
-    scanCache.clear();
+    scanCache.clear(); clearMoveVerdicts();
     crawlData = null;
     return { error: err.message, started: true };
   }
 
   // Приёмник изменился — кеши устарели, сбрасываем перед следующим обновлением.
-  scanCache.clear();
+  scanCache.clear(); clearMoveVerdicts();
   crawlData = null;
 
   if (res.cancelled) {

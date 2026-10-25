@@ -900,6 +900,7 @@ const ACTION_VERB = {
   rmdir: 'убираю папку',
   rollback: 'возвращаю как было',
   verify: 'сверяю перемещения',
+  scan: 'читаю папки',
 };
 
 async function runSync() {
@@ -921,6 +922,14 @@ async function runSync() {
   };
   const unsubscribe = window.api.onSyncProgress(({ done, total, action, path, by }) => {
     if (action === 'rollback') return; // текст уже показан кнопкой остановки
+    // Скан на запуске: всего заранее не знаем - бегущая полоса и число прочитанных файлов вместо
+    // молчаливого «Начинаю…» (Алексей 25.10: окно долго стояло без цифр).
+    if (action === 'scan') {
+      el.progressBar.classList.add('indeterminate');
+      el.progressText.textContent = `Читаю папки: ${done.toLocaleString('ru-RU')} файлов`;
+      return;
+    }
+    el.progressBar.classList.remove('indeterminate');
     const pct = total ? Math.round((done / total) * 100) : 100;
     el.progressFill.style.width = `${pct}%`;
     el.progressText.textContent = `${done}/${total} · ${ACTION_VERB[action] || ''} ${path}`;

@@ -4,6 +4,13 @@ What changed for the user in each release. The full text of each release, in Eng
 Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
 [releases page](https://github.com/ALEXalesha/SyncGlass/releases).
 
+## Unreleased
+
+- "Run" right after a preview no longer checks all move candidates a second time: the preview's results are reused
+  for 15 minutes, like the scans themselves (on the author's tree the copying started only 1.5 hours after pressing
+  Run). A file that changed and shows up in a new scan is checked again. The check runs 128 at a time instead of 64.
+- "Run" shows "Reading folders: N files" while it reads both sides, instead of a silent "Starting...".
+
 ## 1.3.0 - 2026-10-24 - big trees
 
 - Preview of a tree after moving folders "hung": the file counter stopped at the last scanned number (1 030 009 on

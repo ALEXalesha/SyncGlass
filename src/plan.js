@@ -469,14 +469,31 @@ function topPaths(paths) {
 // («зависло на 1 030 009», 24.10). Бросок из onStep останавливает сверку и уходит
 // вызывающему. Каждая пара - два маленьких чтения, узкое место - задержка (сеть),
 // а не объём, поэтому одновременных сверок больше, чем записей при выполнении.
-const CONFIRM_CONCURRENCY = 64;
+const CONFIRM_CONCURRENCY = 128;
 
-async function confirmMoves(srcRoot, dstRoot, plan, onStep = null) {
+// Вердикты сверки живут столько же, сколько сканы (SCAN_TTL_MS в main.js): «Выполнить» после
+// предпросмотра строит план из того же кеша сканов и раньше сверял те же сотни тысяч пар второй
+// раз (Алексей 25.10: копирование началось через полтора часа). Ключ - обе стороны пары вместе
+// с размером и датами из скана: файл, изменившийся и попавший в новый скан, получит новый ключ и
+// сверится заново. Сбрасывается вместе с кешем сканов (clearMoveVerdicts).
+const VERDICT_TTL_MS = 15 * 60 * 1000;
+const moveVerdicts = new Map();
+const verdictKey = (srcRoot, dstRoot, mv) => [srcRoot, mv.to, dstRoot, mv.from, mv.size,
+  mv.added && mv.added.mtimeMs, mv.gone && mv.gone.mtimeMs].join('\0');
+function clearMoveVerdicts() { moveVerdicts.clear(); }
+
+async function confirmMoves(srcRoot, dstRoot, plan, onStep = null, now = Date.now) {
   if (plan.moves.length === 0) return;
   const total = plan.moves.length;
   const verdicts = new Array(total);
-  const idx = plan.moves.map((_, i) => i);
+  const t0 = now();
+  for (const [k, v] of moveVerdicts) if (t0 - v.at >= VERDICT_TTL_MS) moveVerdicts.delete(k);
+  const idx = [];
   let done = 0;
+  plan.moves.forEach((mv, i) => {
+    const hit = moveVerdicts.get(verdictKey(srcRoot, dstRoot, mv));
+    if (hit) { verdicts[i] = hit.ok; done += 1; } else idx.push(i);
+  });
   let stop = null;
   const step = () => {
     if (!onStep || stop) return;
@@ -494,6 +511,7 @@ async function confirmMoves(srcRoot, dstRoot, plan, onStep = null) {
       path.join(srcRoot, mv.to),
       path.join(dstRoot, mv.from)
     ).catch(() => false);
+    moveVerdicts.set(verdictKey(srcRoot, dstRoot, mv), { ok: verdicts[i], at: now() });
     done += 1;
     step();
   });
@@ -619,6 +637,8 @@ function countByFolder(plan, folders) {
 
 module.exports = {
   buildRunPlan,
+  confirmMoves,
+  clearMoveVerdicts,
   planForBranch,
   countByFolder,
   scanFromIndex,
