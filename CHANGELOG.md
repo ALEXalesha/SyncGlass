@@ -10,6 +10,7 @@ Russian, is in [docs/release-notes](docs/release-notes) (from 1.2.0) and on the
   for 15 minutes, like the scans themselves (on the author's tree the copying started only 1.5 hours after pressing
   Run). A file that changed and shows up in a new scan is checked again. The check runs 128 at a time instead of 64.
 - "Run" shows "Reading folders: N files" while it reads both sides, instead of a silent "Starting...".
+- Both versions: the Electron one and the C# one (same cache, same 15 minutes, 128 checks at a time, the same "Reading folders" counter).
 
 ## 1.3.0 - 2026-10-24 - big trees
 

@@ -140,6 +140,7 @@ public sealed class Backend
             _scanCache.Clear();
             _crawlData = null;
         }
+        Plan.ClearMoveVerdicts();
     }
 
     // Сканер ветки: из индекса обхода, иначе живой скан. Раскладка индекса и исключений
@@ -279,6 +280,7 @@ public sealed class Backend
             _crawlData = null;
             _scanCache.Clear();
         }
+        Plan.ClearMoveVerdicts();
     }
 
     // Обходит одну сторону и говорит, можно ли доверять индексу: папку проверяем до
@@ -611,7 +613,23 @@ public sealed class Backend
         SyncPlan plan;
         try
         {
-            plan = await Plan.BuildRunPlan(srcRoot!, dstRoot!, args.Folders, args.Excludes, MakeScanner(null, args.Folders), OnMoves);
+            // Живой скан на запуске (кеш предпросмотра старше ScanTtl или его нет) - со счётчиком: раньше окно
+            // до первой цифры стояло на «Начинаю…» всё время чтения обеих сторон (Алексей 25.10, как в main.js).
+            var scanned = 0;
+            var scanSent = Stopwatch.StartNew();
+            var scanGate = new object();
+            void OnScanFile()
+            {
+                int n;
+                lock (scanGate)
+                {
+                    n = ++scanned;
+                    if (scanSent.ElapsedMilliseconds <= 150) return;
+                    scanSent.Restart();
+                }
+                progress?.Report(new SyncProgress(n, 0, "scan", "", noCounts));
+            }
+            plan = await Plan.BuildRunPlan(srcRoot!, dstRoot!, args.Folders, args.Excludes, MakeScanner(OnScanFile, args.Folders), OnMoves);
         }
         catch (Exception err)
         {

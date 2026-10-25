@@ -194,6 +194,8 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
         else await RunSync();
     }
 
+    private static readonly System.Globalization.CultureInfo Ru = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
+
     private static readonly Dictionary<string, string> ActionVerb = new()
     {
         ["move"] = "перемещаю",
@@ -221,6 +223,15 @@ public sealed partial class PreviewModel(MainViewModel main) : ObservableObject
         var progress = new Progress<SyncProgress>(p =>
         {
             if (p.Action == "rollback") return; // текст уже показан кнопкой остановки
+            // Скан на запуске: всего заранее не знаем - бегущая полоса и число прочитанных файлов вместо
+            // молчаливого «Начинаю…» (Алексей 25.10, как в renderer.js).
+            if (p.Action == "scan")
+            {
+                ProgressIndeterminate = true;
+                ProgressText = $"Читаю папки: {p.Done.ToString("N0", Ru)} файлов";
+                return;
+            }
+            ProgressIndeterminate = false;
             ProgressPercent = p.Total > 0 ? Math.Round(p.Done * 100.0 / p.Total) : 100;
             ProgressText = $"{p.Done}/{p.Total} · {ActionVerb.GetValueOrDefault(p.Action, "")} {p.Path}";
             Move.Set(p.By.GetValueOrDefault("move"), _lastTotals.Move);

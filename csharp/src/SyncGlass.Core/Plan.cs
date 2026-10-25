@@ -344,16 +344,50 @@ public static class Plan
     // дерева кандидатов сотни тысяч, и сверка шла молча, счётчик скана стоял. Бросок из onStep
     // останавливает сверку и уходит вызывающему. Пара - два маленьких чтения, узкое место -
     // задержка сети, поэтому сверок разом больше, чем записей при выполнении (как в plan.js).
-    public const int ConfirmConcurrency = 64;
+    public const int ConfirmConcurrency = 128;
 
-    private static async Task ConfirmMoves(string srcRoot, string dstRoot, SyncPlan plan, Action<int, int>? onStep = null)
+    // Вердикты сверки живут столько же, сколько сканы (Backend.ScanTtl): «Выполнить» после предпросмотра
+    // строит план из того же кеша сканов и раньше сверял те же сотни тысяч пар второй раз (Алексей 25.10:
+    // копирование началось через полтора часа). Ключ - обе стороны пары с размером и датами из скана: файл,
+    // изменившийся и попавший в новый скан, получит новый ключ и сверится заново. Сбрасывается вместе с
+    // кешем сканов (ClearMoveVerdicts). Как moveVerdicts в plan.js.
+    public static readonly TimeSpan VerdictTtl = TimeSpan.FromMinutes(15);
+    private static readonly Dictionary<string, (bool Ok, DateTime At)> MoveVerdicts = new(StringComparer.Ordinal);
+
+    private static string VerdictKey(string srcRoot, string dstRoot, Move mv) =>
+        string.Join('\0', srcRoot, mv.To, dstRoot, mv.From, mv.Size, mv.Added.MtimeMs, mv.Gone.MtimeMs);
+
+    public static void ClearMoveVerdicts()
+    {
+        lock (MoveVerdicts) MoveVerdicts.Clear();
+    }
+
+    internal static async Task ConfirmMoves(string srcRoot, string dstRoot, SyncPlan plan, Action<int, int>? onStep = null,
+        Func<DateTime>? now = null)
     {
         if (plan.Moves.Count == 0) return;
+        now ??= () => DateTime.UtcNow;
         var total = plan.Moves.Count;
         var verdicts = new bool[total];
         var gate = new object();
         var done = 0;
         Exception? stop = null;
+        var todo = new List<int>();
+        lock (MoveVerdicts)
+        {
+            var t0 = now();
+            foreach (var k in MoveVerdicts.Where(kv => t0 - kv.Value.At >= VerdictTtl).Select(kv => kv.Key).ToList())
+                MoveVerdicts.Remove(k);
+            for (var i = 0; i < total; i++)
+            {
+                if (MoveVerdicts.TryGetValue(VerdictKey(srcRoot, dstRoot, plan.Moves[i]), out var hit))
+                {
+                    verdicts[i] = hit.Ok;
+                    done++;
+                }
+                else todo.Add(i);
+            }
+        }
         void Step()
         {
             // Работники пула идут на разных потоках: счёт и вызов - под замком, по порядку.
@@ -365,12 +399,13 @@ public static class Plan
             }
         }
         Step();
-        await FsOps.RunPool(Enumerable.Range(0, total).ToList(), ConfirmConcurrency, async i =>
+        await FsOps.RunPool(todo, ConfirmConcurrency, async i =>
         {
             if (Volatile.Read(ref stop) != null) return;
             var mv = plan.Moves[i];
             try { verdicts[i] = await FsOps.SameContent(Path.Join(srcRoot, mv.To), Path.Join(dstRoot, mv.From)); }
             catch { verdicts[i] = false; }
+            lock (MoveVerdicts) MoveVerdicts[VerdictKey(srcRoot, dstRoot, mv)] = (verdicts[i], now());
             lock (gate) done++;
             Step();
         });

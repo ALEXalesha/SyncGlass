@@ -112,7 +112,7 @@
 |---|---|---|
 | Код | корень репозитория: `main.js`, `renderer/`, `src/` | `csharp/` |
 | Файлы выпуска | `SyncGlass Setup 1.3.0.exe`, `SyncGlass-1.3.0-portable.exe` | `SyncGlass-CSharp-Setup-1.3.0.exe`, `SyncGlass-CSharp-1.3.0-portable.exe` |
-| Тесты | 212 на `node --test` | 266 на xUnit |
+| Тесты | 214 на `node --test` | 269 на xUnit |
 
 - **Одни файлы.** Настройки, история, кеш размеров и место окна лежат в
   `%APPDATA%\SyncGlass` в одном формате. Тесты договора C# читают файлы, которые
@@ -711,7 +711,7 @@ npm test
 и `renderer.js` поднимаются с заглушками: Электрон и DOM подменяются
 в `test/helpers/`. Настоящий Электрон для тестов не нужен.
 
-Тесты C#-версии - `dotnet test csharp/SyncGlass.sln`, 266 штук: перенесённые тесты и
+Тесты C#-версии - `dotnet test csharp/SyncGlass.sln`, 269 штук: перенесённые тесты и
 законы, договор файлов с Electron, модель окна и настоящее окно WPF.
 
 - `sync.test.js` — сравнение файлов, поиск перемещений, разница структуры папок,
