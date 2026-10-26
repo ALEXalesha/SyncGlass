@@ -22,9 +22,9 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -35,7 +35,7 @@ jobs:
       - name: Тесты, законы и законы масштаба
         run: npm test
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "8.0.x"
 
