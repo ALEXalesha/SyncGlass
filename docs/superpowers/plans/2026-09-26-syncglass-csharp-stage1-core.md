@@ -1,14 +1,14 @@
-# SyncGlass на C#, этап 1: блокировка и чистое ядро — план работ
+# SyncGlass на C#, этап 1: блокировка и чистое ядро - план работ
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** проверенная проба общей блокировки и перенесённые в C# `paths.js`, `sync.js`, `plan.js` (с нужной им частью `fsops.js`) вместе со всеми их тестами.
 
-**Architecture:** решение `csharp/SyncGlass.sln`: `SyncGlass.Core` (net8.0, без WPF) и `SyncGlass.Tests` (xUnit). Модули переносятся один к одному: файл = модуль JS, метод = функция JS в PascalCase, комментарии «почему» переносятся. Источник истины для поведения — JS-код и JS-тесты; C#-тест — перевод JS-теста с тем же русским названием.
+**Architecture:** решение `csharp/SyncGlass.sln`: `SyncGlass.Core` (net8.0, без WPF) и `SyncGlass.Tests` (xUnit). Модули переносятся один к одному: файл = модуль JS, метод = функция JS в PascalCase, комментарии «почему» переносятся. Источник истины для поведения - JS-код и JS-тесты; C#-тест - перевод JS-теста с тем же русским названием.
 
 **Tech Stack:** .NET 8 (SDK 9.0.314 на ПК), xUnit 2.9.2, Node 24 для генерации образцов.
 
-Проект: `docs/superpowers/specs/2026-09-26-syncglass-csharp-design.md`. Этапы 2–4 (FsOps целиком, Backend, окно, выпуск) — отдельными планами, когда дойдёт очередь.
+Проект: `docs/superpowers/specs/2026-09-26-syncglass-csharp-design.md`. Этапы 2-4 (FsOps целиком, Backend, окно, выпуск) - отдельными планами, когда дойдёт очередь.
 
 ---
 
@@ -19,7 +19,7 @@
 | JS | C# | Почему |
 |---|---|---|
 | `a.sort()` без функции | `list.Sort(StringComparer.Ordinal)` | JS сортирует по кодам UTF-16, как `Ordinal` |
-| `sort((a,b) => a.length - b.length)` | `OrderBy(x => x.Length)` (LINQ) | сортировка JS устойчивая, `List.Sort` — нет |
+| `sort((a,b) => a.length - b.length)` | `OrderBy(x => x.Length)` (LINQ) | сортировка JS устойчивая, `List.Sort` - нет |
 | `p.toLowerCase()` | `Paths.CiKey(p)` | сверяется образцом из Node (`fixtures/cikey.json`) |
 | `Map`, `Set` | `Dictionary`, `HashSet` с `StringComparer.Ordinal` | ключи уже приведены через `CiKey`; порядок вставки `Dictionary` без удалений сохраняется, как у `Map` |
 | `{...e, path: x}` | `e with { Path = x }` | записи неизменяемые |
@@ -44,7 +44,7 @@
 - [ ] **Step 1: Node держит канал**
 
 ```js
-// pipe_node.js — держит канал, пока не убьют
+// pipe_node.js - держит канал, пока не убьют
 const net = require('net');
 const name = '\\\\.\\pipe\\SyncGlass-probe';
 const srv = net.createServer((s) => { s.on('data', (d) => console.log('got', d.toString())); });
@@ -72,7 +72,7 @@ try {
 
 Плюс: .NET-клиент (`NamedPipeClientStream`) шлёт «show» в канал Node и наоборот.
 
-- [ ] **Step 4: записать итог в проект** — раздел «Общая блокировка» в спецификации: что вышло, и какой механизм выбран. Если хоть один прогон не как ожидалось — механизм «файл `instance.lock` с PID и временем старта».
+- [ ] **Step 4: записать итог в проект** - раздел «Общая блокировка» в спецификации: что вышло, и какой механизм выбран. Если хоть один прогон не как ожидалось - механизм «файл `instance.lock` с PID и временем старта».
 
 ---
 
@@ -92,7 +92,7 @@ dotnet sln add src/SyncGlass.Core tests/SyncGlass.Tests
 dotnet add tests/SyncGlass.Tests reference src/SyncGlass.Core
 ```
 
-Удалить `Class1.cs` и `UnitTest1.cs`. В обоих csproj: `<Nullable>enable</Nullable>`, `<ImplicitUsings>enable</ImplicitUsings>`, `<RootNamespace>SyncGlass.Core</RootNamespace>` / `SyncGlass.Tests`. Версии пакетов тестов — как в Paint: `Microsoft.NET.Test.Sdk 17.11.1`, `xunit 2.9.2`, `xunit.runner.visualstudio 2.8.2`. `InternalsVisibleTo("SyncGlass.Tests")` в Core — тесты зовут внутренние функции так же, как JS-тесты зовут неэкспортированные через модуль.
+Удалить `Class1.cs` и `UnitTest1.cs`. В обоих csproj: `<Nullable>enable</Nullable>`, `<ImplicitUsings>enable</ImplicitUsings>`, `<RootNamespace>SyncGlass.Core</RootNamespace>` / `SyncGlass.Tests`. Версии пакетов тестов - как в Paint: `Microsoft.NET.Test.Sdk 17.11.1`, `xunit 2.9.2`, `xunit.runner.visualstudio 2.8.2`. `InternalsVisibleTo("SyncGlass.Tests")` в Core - тесты зовут внутренние функции так же, как JS-тесты зовут неэкспортированные через модуль.
 
 `csharp/.gitignore`: `bin/`, `obj/`, `*.user`.
 
@@ -109,7 +109,7 @@ dotnet add tests/SyncGlass.Tests reference src/SyncGlass.Core
 - [ ] **Step 1: генератор образцов**
 
 ```js
-// tools/make-fixtures.js — образцы договора двух версий. Пишет их Node,
+// tools/make-fixtures.js - образцы договора двух версий. Пишет их Node,
 // читают тесты C#: так сверяется ровно то поведение, которое у JS на деле.
 'use strict';
 const fs = require('fs');
@@ -130,7 +130,7 @@ Run: `node tools/make-fixtures.js` → `fixtures written`.
 
 - [ ] **Step 2: красные тесты**
 
-`Fixtures.cs` — путь к `fixtures/` от папки сборки вверх до `.git`:
+`Fixtures.cs` - путь к `fixtures/` от папки сборки вверх до `.git`:
 
 ```csharp
 namespace SyncGlass.Tests;
@@ -175,7 +175,7 @@ public class ContractTests
 }
 ```
 
-`PathsTests.cs` — перевод трёх тестов `test/paths.test.js` (`path.resolve('data')` → `Path.GetFullPath("data")`, `path.sep` → `Path.DirectorySeparatorChar`), названия те же:
+`PathsTests.cs` - перевод трёх тестов `test/paths.test.js` (`path.resolve('data')` → `Path.GetFullPath("data")`, `path.sep` → `Path.DirectorySeparatorChar`), названия те же:
 `rootsOverlap_ловит_вложенность_корней_в_обе_стороны`, `rootsOverlap_считает_одну_и_ту_же_папку_пересечением`, `rootsOverlap_пропускает_соседние_папки_и_общий_префикс_имени`.
 
 Run: `dotnet test csharp/SyncGlass.sln` → ошибка сборки: `Paths` не существует.
@@ -209,9 +209,9 @@ public static class Paths
 }
 ```
 
-Внимание: `path.resolve` в Node срезает хвостовой разделитель, `GetFullPath` — нет. Тест «`base + sep`» это и ловит; если красный — срезать `TrimEnd` хвост, кроме корня диска (`C:\`).
+Внимание: `path.resolve` в Node срезает хвостовой разделитель, `GetFullPath` - нет. Тест «`base + sep`» это и ловит; если красный - срезать `TrimEnd` хвост, кроме корня диска (`C:\`).
 
-- [ ] **Step 4:** тесты зелёные. Если `CiKey_совпадает` красный на отдельных образцах (ожидаемые кандидаты — `İ`, `ẞ`, `ǅ`), дописать в `CiKey` точечные замены по образцу JS и комментарий, какой символ и почему. Регенерировать образец нельзя — он и есть договор.
+- [ ] **Step 4:** тесты зелёные. Если `CiKey_совпадает` красный на отдельных образцах (ожидаемые кандидаты - `İ`, `ẞ`, `ǅ`), дописать в `CiKey` точечные замены по образцу JS и комментарий, какой символ и почему. Регенерировать образец нельзя - он и есть договор.
 - [ ] **Step 5: мутация:** `CiKey` → `p.ToLower()` при `CultureInfo("tr-TR")` в тесте даёт красный на `İ`; `IsInside` без добавления разделителя → красный на `data2`.
 - [ ] **Step 6: коммит** «C#: Paths и образец ключа путей из Node».
 
@@ -255,24 +255,24 @@ public sealed class SyncPlan
 public sealed record Summary(int Move, int Copy, int Overwrite, int Trash, int Unchanged, int Dirs, int Total);
 ```
 
-- [ ] **Step 2: красные тесты** — перевод всех тестов `test/sync.test.js` (177 строк), названия те же, помощник `F(path, size, mtime)`. `assert.deepStrictEqual(plan.copy.map(e => e.path), [...])` → `Assert.Equal(new[]{...}, plan.Copy.Select(e => e.Path))`.
+- [ ] **Step 2: красные тесты** - перевод всех тестов `test/sync.test.js` (177 строк), названия те же, помощник `F(path, size, mtime)`. `assert.deepStrictEqual(plan.copy.map(e => e.path), [...])` → `Assert.Equal(new[]{...}, plan.Copy.Select(e => e.Path))`.
 
 Run → сборка падает: нет `Sync`.
 
-- [ ] **Step 3: `Sync.cs`** — перенос `src/sync.js` функция в функцию: `MtimeToleranceMs = 2000`, `IndexByPath`, `IsChanged`, `PlanSync`, `BaseName`, `KeyByName`, `GroupBy` (Dictionary с порядком вставки), `PairUp`, `DetectMoves` (возвращает новый `SyncPlan` с теми же Dirs/Conflicts/Skipped и новыми Moves/Copy/Trash), `UniqueDirs`, `PlanDirs` (сортировка `StringComparer.Ordinal`, `Remove` — обратный порядок), `Summarize`. Комментарии «почему» из JS переносятся сокращённо, со ссылкой на `src/sync.js`.
+- [ ] **Step 3: `Sync.cs`** - перенос `src/sync.js` функция в функцию: `MtimeToleranceMs = 2000`, `IndexByPath`, `IsChanged`, `PlanSync`, `BaseName`, `KeyByName`, `GroupBy` (Dictionary с порядком вставки), `PairUp`, `DetectMoves` (возвращает новый `SyncPlan` с теми же Dirs/Conflicts/Skipped и новыми Moves/Copy/Trash), `UniqueDirs`, `PlanDirs` (сортировка `StringComparer.Ordinal`, `Remove` - обратный порядок), `Summarize`. Комментарии «почему» из JS переносятся сокращённо, со ссылкой на `src/sync.js`.
 
 - [ ] **Step 4:** зелёные.
-- [ ] **Step 5: мутации:** `IsChanged` с `>=` вместо `>` (граница 2000 мс); `PairUp` без проверки `from.length !== 1`; `PlanDirs` без `CiKey`. Каждая — красный тест.
+- [ ] **Step 5: мутации:** `IsChanged` с `>=` вместо `>` (граница 2000 мс); `PairUp` без проверки `from.length !== 1`; `PlanDirs` без `CiKey`. Каждая - красный тест.
 - [ ] **Step 6: коммит** «C#: Sync».
 
 ---
 
-### Task 5: часть `FsOps`, нужная плану — `RunPool` и `SameContent`
+### Task 5: часть `FsOps`, нужная плану - `RunPool` и `SameContent`
 
 **Files:**
 - Create: `csharp/src/SyncGlass.Core/FsOps.cs`, `csharp/tests/SyncGlass.Tests/FsOpsTests.cs`, `csharp/tests/SyncGlass.Tests/TempDir.cs`
 
-- [ ] **Step 1: `TempDir`** — временная папка на тест, убирается в `Dispose` (в Корзину не нужно: это папка теста в `%TEMP%`, как `fs.mkdtemp` в JS-тестах).
+- [ ] **Step 1: `TempDir`** - временная папка на тест, убирается в `Dispose` (в Корзину не нужно: это папка теста в `%TEMP%`, как `fs.mkdtemp` в JS-тестах).
 
 ```csharp
 namespace SyncGlass.Tests;
@@ -292,9 +292,9 @@ internal sealed class TempDir : IDisposable
 }
 ```
 
-- [ ] **Step 2: красные тесты** — перевод тестов `sameContent` и `runPool` из `test/fsops.test.js` (найти: `grep -n "sameContent\|runPool" test/fsops.test.js`) плюс:
+- [ ] **Step 2: красные тесты** - перевод тестов `sameContent` и `runPool` из `test/fsops.test.js` (найти: `grep -n "sameContent\|runPool" test/fsops.test.js`) плюс:
   - `RunPool` не держит в работе больше `concurrency` задач (счётчик в воздухе);
-  - `SameContent` различает файлы одного размера с разницей в середине большого файла только если разница попала в края — как в JS: читаются края по 64 КБ (`SAMPLE_BYTES`), это осознанное решение, тест его фиксирует.
+  - `SameContent` различает файлы одного размера с разницей в середине большого файла только если разница попала в края - как в JS: читаются края по 64 КБ (`SAMPLE_BYTES`), это осознанное решение, тест его фиксирует.
 
 - [ ] **Step 3: код**
 
@@ -354,7 +354,7 @@ public static partial class FsOps
 }
 ```
 
-Перед записью `Edges` свериться с JS `edges()` (строки 346–360 `src/fsops.js`): порог «весь файл» и позиции краёв должны совпасть с JS буква в букву; код выше поправить под JS, если отличается.
+Перед записью `Edges` свериться с JS `edges()` (строки 346-360 `src/fsops.js`): порог «весь файл» и позиции краёв должны совпасть с JS буква в букву; код выше поправить под JS, если отличается.
 
 - [ ] **Step 4:** зелёные. **Step 5: мутации:** `RunPool` с `concurrency + 1` → красный счётчик; `SameContent` без сравнения длины → красный.
 - [ ] **Step 6: коммит** «C#: RunPool и SameContent».
@@ -386,11 +386,11 @@ public delegate Task<ScanResult> Scanner(string root, string branch, IReadOnlyCo
 public sealed record FolderCount(string Folder, Summary Summary);
 ```
 
-- [ ] **Step 2: красные тесты** — из `test/plan.test.js` все тесты функций, которым не нужен диск: `ancestorsOf`, `scanFromIndex`, `groupIndexByBranch`, `groupExcludesByBranch`, `countByFolder`, плюс `topPaths`/`underAny` через них. Найти: `grep -nE "^test\(" test/plan.test.js` и переводить по порядку, названия те же.
+- [ ] **Step 2: красные тесты** - из `test/plan.test.js` все тесты функций, которым не нужен диск: `ancestorsOf`, `scanFromIndex`, `groupIndexByBranch`, `groupExcludesByBranch`, `countByFolder`, плюс `topPaths`/`underAny` через них. Найти: `grep -nE "^test\(" test/plan.test.js` и переводить по порядку, названия те же.
 
-- [ ] **Step 3: код** — перенос из `src/plan.js`: `AncestorsOf`, `AppendAll` (не нужен — `List.AddRange`), `CoveredByKey`, `UnderAny` (возвращает `Func<string,bool>`), `TopPaths` (устойчивая сортировка `OrderBy(Length)`), `FindTypeConflicts`, `ScanFromIndex`, `GroupIndexByBranch`, `GroupExcludesByBranch` (`Dictionary<string, HashSet<string>>`), `CountByFolder` (ветки «от длинных к коротким» — `OrderByDescending(Length)`, устойчиво).
+- [ ] **Step 3: код** - перенос из `src/plan.js`: `AncestorsOf`, `AppendAll` (не нужен - `List.AddRange`), `CoveredByKey`, `UnderAny` (возвращает `Func<string,bool>`), `TopPaths` (устойчивая сортировка `OrderBy(Length)`), `FindTypeConflicts`, `ScanFromIndex`, `GroupIndexByBranch`, `GroupExcludesByBranch` (`Dictionary<string, HashSet<string>>`), `CountByFolder` (ветки «от длинных к коротким» - `OrderByDescending(Length)`, устойчиво).
 
-- [ ] **Step 4:** зелёные. **Step 5: мутации:** `TopPaths` через `List.Sort` (неустойчивая) — если ни один тест не краснеет, это не ошибка мутации, а дыра: дописать тест на порядок равных по длине; `CountByFolder` берёт первую, а не самую длинную ветку → красный.
+- [ ] **Step 4:** зелёные. **Step 5: мутации:** `TopPaths` через `List.Sort` (неустойчивая) - если ни один тест не краснеет, это не ошибка мутации, а дыра: дописать тест на порядок равных по длине; `CountByFolder` берёт первую, а не самую длинную ветку → красный.
 - [ ] **Step 6: коммит** «C#: Plan, чистые функции».
 
 ---
@@ -406,13 +406,13 @@ public sealed record FolderCount(string Folder, Summary Summary);
 **Files:**
 - Modify: `csharp/src/SyncGlass.Core/Plan.cs`, `csharp/tests/SyncGlass.Tests/PlanTests.cs`
 
-- [ ] **Step 1: красные тесты** — остальные тесты `test/plan.test.js`: `planForBranch`, `buildRunPlan`, `statType` (типы веток, конфликты «папка против файла», закрытые правами узлы через подставной сканер, подтверждение перемещений по содержимому, счёт обращений к диску через памятку). Сканер в тестах — живой рекурсивный обход `TempDir`, написанный в самом тесте, как в JS-тестах (найти: `grep -n "scan =" test/plan.test.js`).
+- [ ] **Step 1: красные тесты** - остальные тесты `test/plan.test.js`: `planForBranch`, `buildRunPlan`, `statType` (типы веток, конфликты «папка против файла», закрытые правами узлы через подставной сканер, подтверждение перемещений по содержимому, счёт обращений к диску через памятку). Сканер в тестах - живой рекурсивный обход `TempDir`, написанный в самом тесте, как в JS-тестах (найти: `grep -n "scan =" test/plan.test.js`).
 
-- [ ] **Step 2: код** — `StatType(root, rel, memo)` с памяткой `ConcurrentDictionary<string, Task<NodeType>>` (ключ `root + "\0" + CiKey(rel)`), `ReadType`, `StatEntry`, `TypesOf`, `PrefetchTypes` (через `FsOps.RunPool`), `PlanForBranch`, `ConfirmMoves`, `BuildRunPlan`. `NodeType` — `enum { Dir, File, Missing }`. `ENOTDIR` в .NET приходит как `DirectoryNotFoundException` или `IOException` — трактовать как `Missing` так же, как JS.
+- [ ] **Step 2: код** - `StatType(root, rel, memo)` с памяткой `ConcurrentDictionary<string, Task<NodeType>>` (ключ `root + "\0" + CiKey(rel)`), `ReadType`, `StatEntry`, `TypesOf`, `PrefetchTypes` (через `FsOps.RunPool`), `PlanForBranch`, `ConfirmMoves`, `BuildRunPlan`. `NodeType` - `enum { Dir, File, Missing }`. `ENOTDIR` в .NET приходит как `DirectoryNotFoundException` или `IOException` - трактовать как `Missing` так же, как JS.
 
 - [ ] **Step 3:** зелёные, весь набор: `dotnet test csharp/SyncGlass.sln`.
 - [ ] **Step 4: мутации:** `PlanForBranch` сканирует сторону-файл (убрать проверку `srcType == Dir`) → красный; `ConfirmMoves` признаёт всё (`verdict = true`) → красный на «чужом содержимом»; без памятки в `StatType` → красный тест счёта обращений.
-- [ ] **Step 5: коммит** «C#: Plan целиком — план запуска как у Electron».
+- [ ] **Step 5: коммит** «C#: Plan целиком - план запуска как у Electron».
 
 ---
 
